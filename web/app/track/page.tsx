@@ -3,12 +3,10 @@ import { PreparingList } from "@/components/preparing-list";
 import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/i18n/server";
 
-export const metadata = {
-  title: "Track an application",
-  description:
-    "Follow your application through sanction and disbursement, and escalate " +
-    "with a drafted grievance when it stalls.",
-};
+export async function generateMetadata() {
+  const t = await getT();
+  return { title: t("track.h1"), description: t("track.lede") };
+}
 
 export default async function TrackPage() {
   const t = await getT();

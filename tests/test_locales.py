@@ -84,6 +84,22 @@ def test_the_file_is_still_valid_syntax(code):
     """
     text = (LOCALES / f"{code}.ts").read_text(encoding="utf-8")
     assert ",," not in text.replace(" ", ""), f"{code}.ts has a doubled comma"
+
+    # A MISSING comma, which is the same script's other way of breaking a file.
+    # It appended a new entry after the last one, which had no trailing comma
+    # because nothing followed it — and every check here passed while `tsc`
+    # refused all twelve files. Each entry must be separated from the next.
+    lines = text.splitlines()
+    for i, line in enumerate(lines):
+        if not _ENTRY.match(line.strip()):
+            continue
+        nxt = next((s for s in (l.strip() for l in lines[i + 1:]) if s), "")
+        if nxt.startswith("}"):
+            continue                       # last entry may omit the comma
+        assert line.rstrip().endswith(","), (
+            f"{code}.ts line {i + 1} is not followed by a comma: "
+            f"{line.strip()[:60]}"
+        )
     # en.ts closes `} as const;` because StringKey is derived from it; the
     # translations close `};` because they are typed as Partial<Strings>.
     assert re.search(r"\}\s*(?:as const)?\s*;\s*$", text), \

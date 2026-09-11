@@ -3,12 +3,10 @@ import { PageHeader } from "@/components/page-header";
 import { getCatalogMeta, getScheme } from "@/lib/api";
 import { getLang, getPlace, getT } from "@/lib/i18n/server";
 
-export const metadata = {
-  title: "Check what you qualify for",
-  description:
-    "Answer a few optional questions and see every government scheme you are " +
-    "likely to be entitled to, with the reason for each match.",
-};
+export async function generateMetadata() {
+  const t = await getT();
+  return { title: t("check.h1"), description: t("check.lede") };
+}
 
 export default async function CheckPage({
   searchParams,

@@ -255,3 +255,118 @@ export const categoryLabel = (lang: Lang, name: string) =>
 
 export const levelLabel = (lang: Lang, name: string) =>
   label(LEVEL_LABELS, lang, name);
+
+/**
+ * The reasons a scheme matched, or did not.
+ *
+ * `/api/discover` returns these in `matched_on`, `unknown` and `unmet`, and
+ * they are the engine's own field names — a closed set of sixteen, listed in
+ * `_FACET_LABELS`, `_FLAG_FACETS` and the literals beside them in
+ * `src/discovery.py`. They were rendered raw, so a Hindi results page said
+ * "मेल नहीं खाता gender": the sentence translated and the thing it was about
+ * did not.
+ *
+ * They belong here rather than in `locales/` for the same reason the categories
+ * do — they are data the engine emits, and an untranslated one has to fall back
+ * to a word a person can still act on rather than to a key.
+ */
+export const FACET_LABELS: Vocabulary = {
+  age: {
+    hi: "उम्र", mr: "वय", bn: "বয়স", ta: "வயது", te: "వయసు", gu: "ઉંમર",
+    kn: "ವಯಸ್ಸು", ml: "പ്രായം", pa: "ਉਮਰ", or: "ବୟସ", as: "বয়স", ur: "عمر",
+  },
+  caste: {
+    hi: "जाति", mr: "जात", bn: "জাতি", ta: "சாதி", te: "కులం", gu: "જાતિ",
+    kn: "ಜಾತಿ", ml: "ജാതി", pa: "ਜਾਤ", or: "ଜାତି", as: "জাতি", ur: "ذات",
+  },
+  gender: {
+    hi: "लिंग", mr: "लिंग", bn: "লিঙ্গ", ta: "பாலினம்", te: "లింగం",
+    gu: "લિંગ", kn: "ಲಿಂಗ", ml: "ലിംഗം", pa: "ਲਿੰਗ", or: "ଲିଙ୍ଗ",
+    as: "লিংগ", ur: "جنس",
+  },
+  state: {
+    hi: "राज्य", mr: "राज्य", bn: "রাজ্য", ta: "மாநிலம்", te: "రాష్ట్రం",
+    gu: "રાજ્ય", kn: "ರಾಜ್ಯ", ml: "സംസ്ഥാനം", pa: "ਰਾਜ", or: "ରାଜ୍ୟ",
+    as: "ৰাজ্য", ur: "ریاست",
+  },
+  residence: {
+    hi: "निवास", mr: "निवास", bn: "বসবাস", ta: "வசிப்பிடம்", te: "నివాసం",
+    gu: "રહેઠાણ", kn: "ವಾಸಸ್ಥಳ", ml: "താമസം", pa: "ਰਿਹਾਇਸ਼", or: "ବସବାସ",
+    as: "বসবাস", ur: "رہائش",
+  },
+  occupation: {
+    hi: "काम", mr: "काम", bn: "কাজ", ta: "தொழில்", te: "వృత్తి", gu: "કામ",
+    kn: "ಉದ್ಯೋಗ", ml: "തൊഴിൽ", pa: "ਕੰਮ", or: "କାମ", as: "কাম", ur: "کام",
+  },
+  employment: {
+    hi: "रोज़गार", mr: "रोजगार", bn: "কর্মসংস্থান", ta: "வேலைவாய்ப்பு",
+    te: "ఉపాధి", gu: "રોજગાર", kn: "ಉದ್ಯೋಗ ಸ್ಥಿತಿ", ml: "തൊഴിൽ നില",
+    pa: "ਰੁਜ਼ਗਾਰ", or: "ନିଯୁକ୍ତି", as: "নিয়োগ", ur: "روزگار",
+  },
+  "marital status": {
+    hi: "वैवाहिक स्थिति", mr: "वैवाहिक स्थिती", bn: "বৈবাহিক অবস্থা",
+    ta: "திருமண நிலை", te: "వైవాహిక స్థితి", gu: "વૈવાહિક સ્થિતિ",
+    kn: "ವೈವಾಹಿಕ ಸ್ಥಿತಿ", ml: "വൈവാഹിക നില", pa: "ਵਿਆਹੁਤਾ ਸਥਿਤੀ",
+    or: "ବୈବାହିକ ସ୍ଥିତି", as: "বৈবাহিক অৱস্থা", ur: "ازدواجی حیثیت",
+  },
+  "family income": {
+    hi: "घर की आय", mr: "घरचे उत्पन्न", bn: "পরিবারের আয়",
+    ta: "குடும்ப வருமானம்", te: "కుటుంబ ఆదాయం", gu: "ઘરની આવક",
+    kn: "ಕುಟುಂಬದ ಆದಾಯ", ml: "കുടുംബ വരുമാനം", pa: "ਘਰ ਦੀ ਆਮਦਨ",
+    or: "ପରିବାରର ଆୟ", as: "পৰিয়ালৰ আয়", ur: "گھر کی آمدنی",
+  },
+  land: {
+    hi: "ज़मीन", mr: "जमीन", bn: "জমি", ta: "நிலம்", te: "భూమి", gu: "જમીન",
+    kn: "ಭೂಮಿ", ml: "ഭൂമി", pa: "ਜ਼ਮੀਨ", or: "ଜମି", as: "মাটি", ur: "زمین",
+  },
+  BPL: {
+    hi: "बीपीएल", mr: "बीपीएल", bn: "বিপিএল", ta: "வறுமைக் கோட்டுக்குக் கீழ்",
+    te: "బీపీఎల్", gu: "બીપીએલ", kn: "ಬಿಪಿಎಲ್", ml: "ബിപിഎൽ", pa: "ਬੀਪੀਐਲ",
+    or: "ବିପିଏଲ", as: "বিপিএল", ur: "بی پی ایل",
+  },
+  disability: {
+    hi: "दिव्यांगता", mr: "दिव्यांगत्व", bn: "প্রতিবন্ধকতা", ta: "மாற்றுத்திறன்",
+    te: "వైకల్యం", gu: "દિવ્યાંગતા", kn: "ಅಂಗವೈಕಲ್ಯ", ml: "ഭിന്നശേഷി",
+    pa: "ਅਪੰਗਤਾ", or: "ଦିବ୍ୟାଙ୍ଗତା", as: "দিব্যাংগতা", ur: "معذوری",
+  },
+  student: {
+    hi: "विद्यार्थी", mr: "विद्यार्थी", bn: "ছাত্রছাত্রী", ta: "மாணவர்",
+    te: "విద్యార్థి", gu: "વિદ્યાર્થી", kn: "ವಿದ್ಯಾರ್ಥಿ", ml: "വിദ്യാർത്ഥി",
+    pa: "ਵਿਦਿਆਰਥੀ", or: "ଛାତ୍ର", as: "ছাত্ৰ", ur: "طالب علم",
+  },
+  minority: {
+    hi: "अल्पसंख्यक", mr: "अल्पसंख्याक", bn: "সংখ্যালঘু", ta: "சிறுபான்மையினர்",
+    te: "మైనారిటీ", gu: "લઘુમતી", kn: "ಅಲ್ಪಸಂಖ್ಯಾತ", ml: "ന്യൂനപക്ഷം",
+    pa: "ਘੱਟਗਿਣਤੀ", or: "ସଂଖ୍ୟାଲଘୁ", as: "সংখ্যালঘু", ur: "اقلیت",
+  },
+  "economic distress": {
+    hi: "आर्थिक संकट", mr: "आर्थिक संकट", bn: "আর্থিক সংকট",
+    ta: "பொருளாதாரச் சிக்கல்", te: "ఆర్థిక ఇబ్బంది", gu: "આર્થિક સંકટ",
+    kn: "ಆರ್ಥಿಕ ಸಂಕಷ್ಟ", ml: "സാമ്പത്തിക പ്രതിസന്ധി", pa: "ਆਰਥਿਕ ਸੰਕਟ",
+    or: "ଆର୍ଥିକ ସଙ୍କଟ", as: "আৰ্থিক সংকট", ur: "معاشی تنگی",
+  },
+  "government employee": {
+    hi: "सरकारी नौकरी", mr: "सरकारी नोकरी", bn: "সরকারি চাকরি",
+    ta: "அரசுப் பணி", te: "ప్రభుత్వ ఉద్యోగం", gu: "સરકારી નોકરી",
+    kn: "ಸರ್ಕಾರಿ ಉದ್ಯೋಗ", ml: "സർക്കാർ ജോലി", pa: "ਸਰਕਾਰੀ ਨੌਕਰੀ",
+    or: "ସରକାରୀ ଚାକିରି", as: "চৰকাৰী চাকৰি", ur: "سرکاری ملازمت",
+  },
+};
+
+/**
+ * One reason, translated — and a list of them joined for a sentence.
+ *
+ * `occupation` is the exception the pass-through in `label()` exists for: the
+ * engine forwards the corpus's own occupation strings unchanged when they are
+ * not one of its known values, so an untranslated one arrives here and must
+ * come out as itself.
+ */
+export const facetLabel = (lang: Lang, name: string) =>
+  label(FACET_LABELS, lang, name);
+
+/** Urdu is written in the Arabic script, which has its own comma. A Latin one
+ *  in a right-to-left line is both wrong and visually jarring. */
+const SEPARATOR: Partial<Record<Lang, string>> = { ur: "، " };
+
+export const facetList = (lang: Lang, names: string[]) =>
+  names.map((n) => facetLabel(lang, n)).join(SEPARATOR[lang] ?? ", ");

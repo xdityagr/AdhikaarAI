@@ -34,7 +34,8 @@ from src.agent import (
     stream as agent_stream,
 )
 from src.calculator import calculate_emi
-from src.catalog import catalog_meta, get_scheme, search_schemes
+from src.catalog import (catalog_meta, get_scheme, search_schemes,
+                         translations_for)
 from src.paths import MEDIA_DIR, TILE_DIR
 from src.config import SCHEMES, get_settings
 from src.corpus import load_corpus
@@ -387,22 +388,39 @@ class DiscoverRequest(BaseModel):
     employment_status: Optional[str] = None
     categories: list[str] = Field(default_factory=list)
     limit: int = Field(default=40, ge=1, le=200)
+    # The language the results are read in. Scheme names and summaries come back
+    # translated where myScheme published a translation; everything else on the
+    # page was already translated and the names were not, which is how a Hindi
+    # results page ended up listing English scheme titles.
+    lang: str = "en"
     # Credit needs a project to price, so it is only evaluated when asked for.
     include_credit: bool = False
     project_type: Optional[str] = None
     project_cost: Optional[float] = Field(default=None, ge=0)
 
 
-def _match_json(match) -> dict:
+def _match_json(match, translated: dict | None = None) -> dict:
+    """One match as JSON, in the reader's language where we have one.
+
+    Field by field, like the catalogue: a scheme translated in name but not in
+    brief shows the translated name and the English brief. Falling back
+    wholesale would hide a good translation, and showing a blank would be worse
+    than either.
+    """
+    name, brief = match.name, match.brief
+    if translated:
+        t_name, t_brief = translated.get(match.slug, ("", ""))
+        name = t_name or name
+        brief = t_brief or brief
     return {
         "scheme_uid": match.scheme_uid,
         "slug": match.slug,
-        "name": match.name,
+        "name": name,
         "strength": match.strength.value,
         "level": match.level,
         "state": match.state,
         "categories": match.categories,
-        "brief": match.brief,
+        "brief": brief,
         "source_url": match.source_url,
         "depth": match.depth,
         "matched_on": match.matched_on,
@@ -456,9 +474,14 @@ async def discover_schemes(request: DiscoverRequest) -> dict:
 
     result = discover_with_credit(facets, profile=profile, limit=request.limit)
 
+    # One lookup for both lists, after ranking: only the schemes about to be
+    # rendered are translated, not the whole corpus that was considered.
+    shown = [m.slug for m in (*result.matches, *result.not_matched)]
+    translated = translations_for(shown, request.lang)
+
     return {
-        "matches": [_match_json(m) for m in result.matches],
-        "not_matched": [_match_json(m) for m in result.not_matched],
+        "matches": [_match_json(m, translated) for m in result.matches],
+        "not_matched": [_match_json(m, translated) for m in result.not_matched],
         "total_considered": result.total_considered,
         "total_matched": result.total_matched,
         "total_not_matched": result.total_not_matched,
@@ -598,6 +621,8 @@ class SchemeEligibilityRequest(BaseModel):
     occupation: Optional[str] = None
     employment_status: Optional[str] = None
     marital_status: Optional[str] = None
+    #: Read in this language. Not a facet — it is stripped before matching.
+    lang: str = "en"
 
 
 @router.post("/eligibility/{slug}")
@@ -608,15 +633,18 @@ async def scheme_eligibility(slug: str, request: SchemeEligibilityRequest) -> di
     general wizard answers only indirectly — it returns hundreds of matches and
     leaves them to find the one they came for.
     """
-    facets = Facets(**request.model_dump())
+    answers = request.model_dump()
+    lang = answers.pop("lang", "en")
+    facets = Facets(**answers)
     match = evaluate_scheme(slug, facets)
     if match is None:
         raise HTTPException(status_code=404, detail=f"No scheme with slug '{slug}'")
+    t_name, t_brief = translations_for([match.slug], lang).get(match.slug, ("", ""))
     return {
         "slug": match.slug,
-        "name": match.name.strip(),
+        "name": (t_name or match.name).strip(),
         "state": match.state,
-        "brief": match.brief,
+        "brief": t_brief or match.brief,
         "verdict": match.strength.value,
         "meets": match.matched_on,
         "unknown": match.unknown,
