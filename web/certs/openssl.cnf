@@ -5,7 +5,7 @@ distinguished_name = dn
 x509_extensions    = v3_req
 
 [dn]
-CN = Adhikaar AI local dev
+CN = Yojna Setu local dev
 
 [v3_req]
 subjectAltName   = @alt_names

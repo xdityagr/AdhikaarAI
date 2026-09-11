@@ -32,8 +32,8 @@ logger = logging.getLogger(__name__)
 
 # src/corpus/loader.py -> src/corpus -> src -> project root
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
-CORPUS_VERSION = os.environ.get("ADHIKAAR_CORPUS_VERSION", "v1")
-CORPUS_DIR = Path(os.environ.get("ADHIKAAR_CORPUS_DIR", _PROJECT_ROOT / "corpus"))
+CORPUS_VERSION = os.environ.get("YOJNASETU_CORPUS_VERSION", "v1")
+CORPUS_DIR = Path(os.environ.get("YOJNASETU_CORPUS_DIR", _PROJECT_ROOT / "corpus"))
 SCHEMES_PATH = CORPUS_DIR / CORPUS_VERSION / "schemes.json"
 
 

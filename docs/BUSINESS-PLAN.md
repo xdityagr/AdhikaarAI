@@ -1,4 +1,4 @@
-# Business Plan — Adhikaar AI
+# Business Plan — Yojna Setu
 
 **The origination layer for India's social-justice credit channel.**
 Companion to `PRD-v3.md`. Sources and confidence levels in `data-sources.md`.
@@ -9,7 +9,7 @@ Companion to `PRD-v3.md`. Sources and confidence levels in `data-sources.md`.
 
 ## 1. The thesis in one paragraph
 
-India runs six national finance and development corporations that lend concessionally to marginalised communities through a "channel finance" model — money flows to State Channelizing Agencies, banks and NBFC-MFIs, who lend onward. The model exists because direct lending at this scale is impractical. But it creates a fragmentation problem the government has never solved on the demand side: a beneficiary cannot tell which scheme fits, cannot find a partner authorised to process it, and cannot tell whether that partner is currently able to disburse at all. India's flagship credit portal, JanSamarth, does not cover any of these corporations. **The entire social-justice credit channel has no digital front door.** Adhikaar AI is that front door — and, because it verifies rather than merely recommends, it produces something a lender can act on instead of advice a lender must re-do.
+India runs six national finance and development corporations that lend concessionally to marginalised communities through a "channel finance" model — money flows to State Channelizing Agencies, banks and NBFC-MFIs, who lend onward. The model exists because direct lending at this scale is impractical. But it creates a fragmentation problem the government has never solved on the demand side: a beneficiary cannot tell which scheme fits, cannot find a partner authorised to process it, and cannot tell whether that partner is currently able to disburse at all. India's flagship credit portal, JanSamarth, does not cover any of these corporations. **The entire social-justice credit channel has no digital front door.** Yojna Setu is that front door — and, because it verifies rather than merely recommends, it produces something a lender can act on instead of advice a lender must re-do.
 
 ---
 
@@ -106,9 +106,9 @@ In a well-run district, the beneficiary-paid share should trend toward **zero** 
 
 So sponsoring scheme access for SC beneficiaries is squarely eligible spend. No stretching.
 
-**The actual sell is not the cause — it's the measurability.** Most CSR spend reports activity, not outcome, and CSR reporting increasingly demands impact numbers. Adhikaar AI emits a per-application audit trail: *N applications filed, ₹Y credit unlocked, Z disbursed, in these districts, for these beneficiaries.* That auditability is the product a CSR head is buying.
+**The actual sell is not the cause — it's the measurability.** Most CSR spend reports activity, not outcome, and CSR reporting increasingly demands impact numbers. Yojna Setu emits a per-application audit trail: *N applications filed, ₹Y credit unlocked, Z disbursed, in these districts, for these beneficiaries.* That auditability is the product a CSR head is buying.
 
-**Sharpest first call: banks and NBFCs.** They carry CSR obligations *and* priority-sector lending targets. Sponsoring Adhikaar AI in a district earns Schedule VII credit **and** produces a pipeline of PSL-eligible, pre-verified borrowers — from the same rupee. That double-count is rare, and it makes the first BD conversation unusually easy.
+**Sharpest first call: banks and NBFCs.** They carry CSR obligations *and* priority-sector lending targets. Sponsoring Yojna Setu in a district earns Schedule VII credit **and** produces a pipeline of PSL-eligible, pre-verified borrowers — from the same rupee. That double-count is rare, and it makes the first BD conversation unusually easy.
 
 ---
 
@@ -143,7 +143,7 @@ Deliberately sequenced. Each phase unlocks the next; skipping ahead fails.
 Deliverable is credibility and the MoSJE relationship, not revenue. A working demo, honest about what's mocked, that visibly solves the ministry's stated problem.
 
 **Phase 2 — One district, end to end (0–6 months post-SIH).**
-Pick a single district in a state with a cooperative SCA and reasonable DigiLocker coverage. Sign one SCA, one NBFC-MFI, and 10–20 CSC operators. Target: **first-time-right rate and trips-per-application**, not user count. The proof point that sells everything after is *"applications through Adhikaar AI are accepted first time at X%, versus Y% baseline."*
+Pick a single district in a state with a cooperative SCA and reasonable DigiLocker coverage. Sign one SCA, one NBFC-MFI, and 10–20 CSC operators. Target: **first-time-right rate and trips-per-application**, not user count. The proof point that sells everything after is *"applications through Yojna Setu are accepted first time at X%, versus Y% baseline."*
 
 **Phase 3 — One state (6–18 months).**
 Scale to the state SCA. Land the first B2G console licence and the first CSR sponsorship. Begin the DigiLocker Requester and AAGG approval processes — start early, they're slow.
@@ -156,7 +156,7 @@ The engine — verified eligibility, routing, packet origination — is not spec
 
 ### 6.1 Distribution — the honest problem
 
-**The PS's root cause is awareness, and awareness is a distribution problem no chatbot solves.** A beneficiary who doesn't know NSFDC schemes exist also doesn't know Adhikaar AI exists. Any plan that assumes inbound WhatsApp traffic is fooling itself.
+**The PS's root cause is awareness, and awareness is a distribution problem no chatbot solves.** A beneficiary who doesn't know NSFDC schemes exist also doesn't know Yojna Setu exists. Any plan that assumes inbound WhatsApp traffic is fooling itself.
 
 Three channels that actually reach this demographic, in priority order:
 

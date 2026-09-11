@@ -6,7 +6,7 @@
  * at the same FastAPI process.
  */
 
-const SERVER_ORIGIN = process.env.ADHIKAAR_API_ORIGIN ?? "http://127.0.0.1:8001";
+const SERVER_ORIGIN = process.env.YOJNASETU_API_ORIGIN ?? "http://127.0.0.1:8001";
 
 function url(path: string): string {
   return typeof window === "undefined" ? `${SERVER_ORIGIN}${path}` : path;

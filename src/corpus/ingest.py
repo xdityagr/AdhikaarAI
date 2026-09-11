@@ -46,7 +46,7 @@ CHANNEL_PARTNERS_PAGE = "https://nsfdc.nic.in/our-channel-partners"
 # OpenStreetMap's tile policy and simply good conduct against a ministry's site —
 # this is public data, fetched monthly, and we should be identifiable while we do it.
 USER_AGENT = (
-    "AdhikaarAI/0.1 (+https://github.com/xdityagr/AdhikaarAI; "
+    "YojnaSetu/0.1 (+https://github.com/xdityagr/AdhikaarAI; "
     "SIH 2026 PS26092; NSFDC scheme matching for beneficiaries)"
 )
 

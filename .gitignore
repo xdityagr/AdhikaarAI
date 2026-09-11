@@ -223,7 +223,7 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
-# ===== AdhikaarAI project-specific =====
+# ===== YojnaSetu project-specific =====
 
 # SQLite database files
 *.db

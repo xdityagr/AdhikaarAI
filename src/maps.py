@@ -43,7 +43,7 @@ TILE_URL = "https://tile.openstreetmap.org/{z}/{x}/{y}.png"
 
 # OSM's tile policy requires this to identify the application and a contact.
 TILE_USER_AGENT = (
-    "AdhikaarAI/0.1 (+https://github.com/xdityagr/AdhikaarAI; "
+    "YojnaSetu/0.1 (+https://github.com/xdityagr/AdhikaarAI; "
     "SIH 2026 PS26092; NSFDC scheme matching)"
 )
 

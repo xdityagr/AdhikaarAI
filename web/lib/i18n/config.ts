@@ -45,15 +45,15 @@ export const LANGUAGE_META: Record<Lang, LanguageMeta> = {
   ur: { name: "Urdu", native: "اردو", dir: "rtl" },
 };
 
-export const LANG_COOKIE = "adhikaar_lang";
+export const LANG_COOKIE = "yojnasetu_lang";
 
 /** Set when a suggestion has been shown and dismissed, so it is not repeated. */
-export const LANG_PROMPT_COOKIE = "adhikaar_lang_asked";
+export const LANG_PROMPT_COOKIE = "yojnasetu_lang_asked";
 
 /** The state we learned, remembered so we ask once and pre-fill everywhere. */
-export const PLACE_COOKIE = "adhikaar_state";
+export const PLACE_COOKIE = "yojnasetu_state";
 /** Set when the location question has been answered or skipped. */
-export const PLACE_ASKED_COOKIE = "adhikaar_state_asked";
+export const PLACE_ASKED_COOKIE = "yojnasetu_state_asked";
 
 export const DEFAULT_LANG: Lang = "en";
 

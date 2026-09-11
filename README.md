@@ -1,4 +1,4 @@
-# Adhikaar AI — SIH26092
+# Yojna Setu — SIH26092
 
 **AI-Driven Scheme Matching for NSFDC Credit Schemes**  
 Smart India Hackathon 2026 · PS26092 · Ministry of Social Justice & Empowerment
@@ -10,7 +10,7 @@ WhatsApp-first assistant that helps SC beneficiaries find NSFDC loan/education s
 ```bash
 # 1. Clone and enter
 git clone https://github.com/xdityagr/AdhikaarAI.git
-cd AdhikaarAI
+cd YojnaSetu
 
 # 2. Create venv and install
 python -m venv .venv

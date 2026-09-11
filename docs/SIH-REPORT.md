@@ -1,4 +1,4 @@
-# Adhikaar AI — SIH 2026 submission report
+# Yojna Setu — SIH 2026 submission report
 
 **PS26092 · AI-Driven Scheme Matching for Marginalized Entrepreneurs**
 Ministry of Social Justice & Empowerment · Category: Software · Theme: Smart Automation
@@ -55,12 +55,12 @@ this project than any other.
 
 ## 2. The solution
 
-**Adhikaar AI is the origination layer for India's social-justice welfare channel.**
+**Yojna Setu is the origination layer for India's social-justice welfare channel.**
 
 Not a chatbot and not a scheme directory. The rail between a beneficiary and an
 office that can actually pay them.
 
-> Every other platform tells you which scheme you *might* qualify for. Adhikaar AI
+> Every other platform tells you which scheme you *might* qualify for. Yojna Setu
 > proves you qualify, tells you what the loan actually costs against the
 > moneylender you would otherwise use, and routes you to a partner who can
 > disburse this month — in your own language, in your own script.

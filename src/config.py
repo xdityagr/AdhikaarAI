@@ -19,7 +19,7 @@ from pydantic import Field
 
 
 def _default_state_db() -> "Path":
-    """Resolved late so ADHIKAAR_STATE_DIR is read at import, not at build.
+    """Resolved late so YOJNASETU_STATE_DIR is read at import, not at build.
 
     Imported inside the function because `src.paths` must not depend on the
     settings and the settings must not depend on the paths at module scope.
@@ -101,7 +101,7 @@ class Settings(BaseSettings):
     #
     # State, not corpus. Tiny, written to, and it has to survive a deploy —
     # which on a container means it must sit on a mounted disk rather than in
-    # the image. `ADHIKAAR_STATE_DIR` moves it without a code change; see
+    # the image. `YOJNASETU_STATE_DIR` moves it without a code change; see
     # `src.paths` for why the corpus is kept somewhere else entirely.
     database_path: str = Field(
         default_factory=lambda: str(_default_state_db()),

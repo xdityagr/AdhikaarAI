@@ -50,7 +50,7 @@ export interface Profile {
   proof?: "declared" | "verified";
 }
 
-const KEY = "adhikaar_profile";
+const KEY = "yojnasetu_profile";
 
 /** The order the sheet asks in, and the order the printed form reads in. */
 export const PROFILE_FIELDS: {

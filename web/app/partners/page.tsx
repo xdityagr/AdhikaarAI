@@ -27,7 +27,7 @@ interface Partner {
   note: string | null;
 }
 
-const API = process.env.ADHIKAAR_API_ORIGIN ?? "http://127.0.0.1:8001";
+const API = process.env.YOJNASETU_API_ORIGIN ?? "http://127.0.0.1:8001";
 
 async function getPartners(): Promise<Partner[]> {
   try {

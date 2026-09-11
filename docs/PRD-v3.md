@@ -1,4 +1,4 @@
-# PRD v3 — Adhikaar AI
+# PRD v3 — Yojna Setu
 
 **SIH 2026 · PS26092 · AI-Driven Scheme Matching for Marginalized Entrepreneurs**
 Ministry of Social Justice & Empowerment · Category: Software · Theme: Smart Automation
@@ -11,13 +11,13 @@ Ministry of Social Justice & Empowerment · Category: Software · Theme: Smart A
 
 ## 0. Snapshot
 
-**Adhikaar AI is the origination layer for India's social-justice credit channel.**
+**Yojna Setu is the origination layer for India's social-justice credit channel.**
 
 Not a chatbot. The rail between a beneficiary and a channel partner who can actually disburse — covering discovery, *proof* of eligibility, financial literacy, correct routing, and a complete application packet that doesn't bounce.
 
 One sentence for a judge:
 
-> Every other platform tells you which scheme you *might* qualify for. Adhikaar AI proves you qualify, teaches you what the loan actually costs, writes your project report, and routes you to a partner that can disburse this month — or, when the rules require you to show up in person, makes sure your one trip works.
+> Every other platform tells you which scheme you *might* qualify for. Yojna Setu proves you qualify, teaches you what the loan actually costs, writes your project report, and routes you to a partner that can disburse this month — or, when the rules require you to show up in person, makes sure your one trip works.
 
 ---
 
@@ -64,7 +64,7 @@ A recommender plus an EMI number is not financial literacy. These are 20% of the
 
 > "**direct loan applications are not entertained**"
 
-Applications go to a **channel partner**, who makes the credit decision. Adhikaar AI never submits to NSFDC. PM SURAJ (`pmsuraj.dosje.gov.in`) is where a beneficiary registers, not somewhere we file on their behalf. Everything in §9 respects this.
+Applications go to a **channel partner**, who makes the credit decision. Yojna Setu never submits to NSFDC. PM SURAJ (`pmsuraj.dosje.gov.in`) is where a beneficiary registers, not somewhere we file on their behalf. Everything in §9 respects this.
 
 ---
 

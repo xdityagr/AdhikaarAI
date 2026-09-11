@@ -9,7 +9,7 @@ setup, and the two implementations disagreed:
   never restored it, so whatever they set leaked into every module and every test
   that ran afterwards. That made the suite order-dependent — a latent bug that
   had not bitten yet only because the leaked value happened to be harmless.
-- test_buttons.py used no fixture at all and wrote a real data/adhikaar.db.
+- test_buttons.py used no fixture at all and wrote a real data/yojnasetu.db.
 
 The autouse fixture below gives every test its own throwaway database and puts the
 singleton back the way it found it. Mutating the cached Settings object inside a

@@ -165,10 +165,10 @@ async def _ensure_columns(
     only: it cannot rename, drop, retype, add constraints, or backfill, and it
     keeps no version history. It exists because `CREATE TABLE IF NOT EXISTS` is
     a no-op on a table that already exists, so a developer with an older
-    data/adhikaar.db would otherwise hit "no such column" at runtime — during
+    data/yojnasetu.db would otherwise hit "no such column" at runtime — during
     demo prep, most likely, which is the worst possible time.
 
-    For anything this can't express, delete data/adhikaar.db and let
+    For anything this can't express, delete data/yojnasetu.db and let
     init_database() rebuild it.
     """
     cursor = await db.execute(f"PRAGMA table_info({table})")

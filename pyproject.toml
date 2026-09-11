@@ -1,5 +1,5 @@
 [project]
-name = "adhikaar"
+name = "yojnasetu"
 version = "0.1.0"
 description = "AI-Driven Scheme Matching for NSFDC Credit Schemes — SIH26092"
 requires-python = ">=3.10"

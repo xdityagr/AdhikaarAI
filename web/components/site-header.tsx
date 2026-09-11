@@ -65,7 +65,7 @@ export function SiteHeader() {
         <Link
           href="/"
           className="shrink-0 rounded-md outline-none focus-visible:ring-3 focus-visible:ring-ring/40"
-          aria-label="Adhikaar AI"
+          aria-label="Yojna Setu"
         >
           <Logo />
         </Link>
