@@ -26,7 +26,9 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import re
 import time
+from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
@@ -679,3 +681,63 @@ class TestPublishedFaqs:
         finally:
             connection.close()
         assert "faqs" not in columns
+
+
+# ---------------------------------------------------------------------------
+# The call door — what the website promises about the phone line
+# ---------------------------------------------------------------------------
+
+class TestTheCallDoor:
+    """The page must not offer a call in a language the line cannot speak.
+
+    The site reads in thirteen languages and the line answers in three. A "Call
+    and ask" button shown to an Odia reader, answered by an English voice, is
+    the exact failure this product exists to prevent — and it is worse on a
+    phone, where there is no screen to fall back on.
+
+    So the front end carries its own copy of the spoken-language list, and this
+    reads both copies and fails when they disagree. A list duplicated across two
+    languages is a list that drifts.
+    """
+
+    CALL_TS = Path(__file__).resolve().parents[1] / "web" / "lib" / "call.ts"
+
+    def _declared(self) -> set[str]:
+        text = self.CALL_TS.read_text(encoding="utf-8")
+        block = re.search(r"CALL_LANGUAGES[^=]*=\s*\[(.*?)\]", text, re.S)
+        assert block, "CALL_LANGUAGES not found in web/lib/call.ts"
+        return set(re.findall(r'"([a-z]{2})"', block.group(1)))
+
+    def test_the_front_end_list_matches_what_we_provision(self):
+        from scripts import provision_voice as provision
+        assert self._declared() == set(provision.VAPI_ELEVENLABS_TTS)
+
+    def test_every_spoken_language_is_one_the_site_has(self):
+        """A language the line speaks but the site cannot render is a greeting
+        nobody can read."""
+        from src.i18n import LANGUAGES
+        assert self._declared() <= set(LANGUAGES)
+
+    def test_the_door_stays_shut_until_a_number_is_configured(self):
+        """A 'Call the helpline' button that cannot place a call is a promise
+        broken in public, so the component returns null instead."""
+        source = (Path(__file__).resolve().parents[1] / "web" / "components"
+                  / "call-door.tsx").read_text(encoding="utf-8")
+        assert "if (!CALL_CONFIGURED) return null;" in source
+
+    def test_a_non_indian_number_warns_before_the_digits(self):
+        """Someone who has read the number has already decided to dial. The
+        cost warning has to come first or it is a disclaimer, not a warning."""
+        source = (Path(__file__).resolve().parents[1] / "web" / "components"
+                  / "call-door.tsx").read_text(encoding="utf-8")
+        warning = source.index("call.international")
+        number = source.index("callDisplayNumber()")
+        assert warning < number
+
+    def test_the_safety_line_is_in_every_language(self):
+        """The commonest fraud against this audience is a call asking for an
+        Aadhaar number or an OTP. Saying we never do is not optional, and it is
+        useless in a language the reader does not have."""
+        locales = Path(__file__).resolve().parents[1] / "web" / "lib" / "i18n" / "locales"
+        for path in locales.glob("*.ts"):
+            assert '"call.safety"' in path.read_text(encoding="utf-8"), path.stem

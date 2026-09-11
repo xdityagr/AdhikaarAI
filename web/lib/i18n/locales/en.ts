@@ -532,5 +532,17 @@ export const en = {
   "field.year": "Year of study",
   "apply.note.no_fee": "No fee is required to apply for a government scheme. Nobody should ask you for money to fill this in.",
   "apply.note.no_documents": "This scheme has not published its document list. Carry proof of identity, address, category and income, and ask at the office what else is needed.",
-  "apply.note.no_steps": "This scheme has not published its steps. The official page is linked above and is the same source we use."
+  "apply.note.no_steps": "This scheme has not published its steps. The official page is linked above and is the same source we use.",
+  // --- The phone door ---------------------------------------------------
+  "call.open": "Call and ask",
+  "call.title": "Call and ask",
+  "call.body": "Ring this number and just speak. No smartphone needed — any phone will do, and there is nothing to install.",
+  "call.helpline": "Helpline",
+  "call.scanHint": "Scan the code, or dial the number",
+  "call.languages": "Answers in",
+  "call.otherLanguage": "The phone line does not answer in your language yet. On WhatsApp it does.",
+  "call.international": "This is not an Indian number yet. Your operator will charge international rates, and some prepaid plans block such calls.",
+  "call.launch": "Call now",
+  "call.dismiss": "Not now",
+  "call.safety": "We never ask for your Aadhaar number, bank details or an OTP. A call that does is not us."
 } as const;

@@ -5,6 +5,7 @@ import { Marked } from "@/components/marked";
 import { Ornament } from "@/components/ornament";
 import { Reveal } from "@/components/reveal";
 import { ScrollCue } from "@/components/scroll-cue";
+import { CallDoor } from "@/components/call-door";
 import { WhatsAppDoor, WhatsAppQrPanel } from "@/components/whatsapp-door";
 import { ButtonLink } from "@/components/ui/button-link";
 import { getCatalogMeta } from "@/lib/api";
@@ -50,6 +51,14 @@ export default async function HomePage() {
             <ArrowRight className="nudge size-4" />
           </ButtonLink>
           <WhatsAppDoor size="pill-lg" />
+          {/*
+            Third, not first. WhatsApp reaches anyone with a smartphone and is
+            the better channel when it is available — it has a screen, so a
+            person can check a claim against the scheme text next to it. This
+            is for the people who have no smartphone at all, and it renders
+            nothing until a number is configured.
+          */}
+          <CallDoor size="pill-lg" />
         </div>
 
         <p className="mt-5 text-[0.8125rem] leading-relaxed text-faint">
