@@ -55,6 +55,105 @@ without the agent loop. Every one returns `(payload: dict, cards: list, summary:
 
 ---
 
+## What the call can actually do
+
+### Tool calling — yes. It is the whole design.
+
+Eight tools, already built and already fast. Vapi calls them; we do not run an
+agent loop. Ship them in two tiers:
+
+**Tier 1 — a call is useless without these**
+
+- `find_schemes` — the deterministic match. 110 ms.
+- `check_scheme_eligibility` — "am I eligible for *this* one", condition by
+  condition.
+- `find_offices` — where to actually go. On a phone this is often the whole
+  reason for the call.
+- **the adaptive interview** — see below. Not currently a tool; make it one.
+
+**Tier 2 — worth having once Tier 1 is solid**
+
+- `lookup_scheme`, `search_schemes`, `price_loan`, `corpus_stats`
+
+**Do not put `prepare_application` on the call.** It fills an eleven-field form.
+Reading a form down a phone line, field by field, is worse than every
+alternative — including saying "I have sent it to your WhatsApp" and using the
+handoff code, whose alphabet already omits O/0 and I/1/L precisely so it can be
+read aloud.
+
+### The adaptive interview is the most voice-native thing we have
+
+`src/interview.py` already picks the single most informative next question given
+what is still in play (`next_question`, `apply_answer`, `coerce`,
+`MAX_QUESTIONS = 8`). On the web that is a nicety — you could show twelve form
+fields at once. **On a phone it is the only workable shape**, because you can
+only ask one question at a time and every extra question is a person deciding to
+hang up.
+
+This is the piece that makes a voice call genuinely better than the website
+rather than a worse copy of it. Wire it first.
+
+`coerce` returning `None` means "ask again", never "skip" — on a call that
+distinction matters more than anywhere else, because a misheard answer recorded
+as a skip produces results that do not reflect what the person said and they
+will never see a screen to catch it.
+
+### FAQs — yes, and there is more there than you would expect
+
+**52,394 published question-and-answer pairs across 4,721 of 4,736 schemes**, in
+the `faqs` column of the `schemes` table. Written by the government, phrased as
+questions people actually ask ("What is the nature and size of the loan under
+…?"). For a voice channel this is the best-shaped content in the corpus.
+
+**But they are English-only.** `scheme_i18n` carries `name`, `brief`,
+`benefits_md`, `eligibility_md`, `application_md` and `documents_md` — there is
+no `faqs` column and no translated FAQ anywhere. So a Hindi caller asking an FAQ
+gets an English answer unless something is done. Two options, in order of
+preference:
+
+1. Check whether myScheme's API returns FAQs per language. If it does, backfill
+   them the way `scripts/backfill_translations.py` backfills the rest. This is
+   the right answer — government-published translations, not invented ones.
+2. If it does not, translating an FAQ answer at read-time is *acceptable* where
+   translating an eligibility verdict is not — it is quoted content, not a
+   decision about a person. Say on the call that it is a translation.
+
+### RAG — no, and this is not an oversight
+
+There are no embeddings, no vector store and no chunk retrieval in this
+codebase, and none should be added for eligibility. Search is SQLite **FTS5**
+(`schemes_fts`, `catalog.py:85`), and eligibility is deterministic structured
+matching (`src/discovery.py`).
+
+The reason is the product's central rule. RAG means: retrieve some prose, let a
+model synthesise an answer from it. For "am I eligible?" that is precisely the
+failure this system exists to prevent — a model reading eligibility text and
+asserting a verdict nobody verified. `src/corpus/land.py` says it plainly:
+*"a regex that declines to guess is worth more than an LLM that always
+answers."*
+
+On a phone call it is worse than on the web, because there is no screen showing
+the source sentence next to the claim. The caller cannot check. They just hear a
+confident voice telling them they qualify.
+
+So the split is:
+
+| Question | How it is answered |
+|---|---|
+| "What am I entitled to?" | deterministic match — computed, never generated |
+| "Am I eligible for this one?" | rule by rule, with the ones we could not check named |
+| "What documents do I need?" | the scheme's own published list |
+| "How long does it take?" / "Can I apply online?" | the scheme's own published FAQ, quoted |
+| "What is this scheme about?" | the scheme's own published summary |
+
+Retrieval, yes — over structured fields and published Q&A, and **quoted, not
+synthesised**. A model may choose the words around the answer. It may not decide
+whether someone qualifies, and it may not invent an answer that is not in the
+corpus. If the corpus does not have it, the correct reply is that we do not
+know and here is the office that will.
+
+---
+
 ## Task 0 — The spike. Do this before committing to Vapi at all.
 
 **Vapi's documentation does not name a single Indic language for either
