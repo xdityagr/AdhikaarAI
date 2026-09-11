@@ -33,7 +33,7 @@ It goes to a GitHub Release and the Dockerfile fetches it at **build** time.
 Gzipped it is 42 MB.
 
 ```bash
-python scripts/publish_corpus.py --tag corpus-2026-09-08
+python scripts/publish_corpus.py --tag corpus-2026-09-12
 ```
 
 That prints a SHA-256. Put the tag in `render.yaml` under `dockerBuildArgs`.
