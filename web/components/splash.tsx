@@ -12,6 +12,10 @@ import { LogoMark } from "@/components/logo";
  * and a layout is not re-rendered on client-side navigation. So it plays once
  * when the site is opened and never again while someone moves around it.
  *
+ * The gloss is Sanskrit, not Hindi — योजनायाः सेतुः, genitive and nominative:
+ * the bridge to the scheme. It is the name explained rather than the name
+ * repeated, and the visarga is deliberate. Do not "fix" it to योजना सेतु.
+ *
  * `pointer-events: none` is set for the whole life of the element rather than
  * at the end of the animation. If anything ever goes wrong with the animation,
  * the failure is an invisible div — not an invisible div that has swallowed
@@ -19,11 +23,11 @@ import { LogoMark } from "@/components/logo";
  */
 export function Splash() {
   return (
-    <div className="adh-splash" aria-hidden="true">
-      <div className="adh-splash-inner">
+    <div className="ys-splash" aria-hidden="true">
+      <div className="ys-splash-inner">
         <LogoMark className="size-11" />
-        <span className="adh-splash-word">Adhikaar AI</span>
-        <span className="adh-splash-gloss">आपका अधिकार</span>
+        <span className="ys-splash-word">Yojna Setu</span>
+        <span className="ys-splash-gloss">योजनायाः सेतुः</span>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-/* Adhikaar AI — custom elements.
+/* Yojna Setu — custom elements.
  *
  * Light DOM on purpose: the shared stylesheet applies without piercing shadow
  * boundaries, and the markup stays inspectable in devtools during a demo.

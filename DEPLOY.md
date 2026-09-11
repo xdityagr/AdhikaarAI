@@ -1,4 +1,4 @@
-# Deploying Adhikaar AI
+# Deploying Yojna Setu
 
 Front end on Vercel, engine on Render, and the corpus baked into the engine's
 image. Roughly forty minutes end to end, most of it waiting for a Docker build.
@@ -47,11 +47,17 @@ nothing to show for it.
 New → Blueprint → point it at this repository. `render.yaml` is picked up
 automatically.
 
-**Already deployed:** `adhikaar-api`, in Singapore, on the free plan —
-<https://adhikaar-api-vcnc.onrender.com>. Render appends a random suffix to new
-`onrender.com` subdomains, so the host is `adhikaar-api-vcnc`, not `adhikaar-api`.
-That URL is what `WEBHOOK_BASE_URL`, the Vercel variables in §4 and Meta's
-callback in §5 all have to agree on.
+**Already deployed**, in Singapore, on the free plan:
+<https://adhikaar-api-vcnc.onrender.com>. That URL is what `WEBHOOK_BASE_URL`,
+the Vercel variables in §4 and Meta's callback in §5 all have to agree on.
+
+The host still carries an older name. A Render service keeps the
+`onrender.com` subdomain it was created with — renaming the service does not
+move it — so adopting `yojna-setu-api` above means creating a new service and
+repointing Vercel and Meta at it. Until that happens the blueprint and the
+running service disagree on the name, and the running service is the one the
+URL above answers from. (The `-vcnc` suffix is Render's own: it appends a random
+one to every new subdomain.)
 
 Then set the secrets in the dashboard (they are marked `sync: false`, so they
 are never in git):
@@ -93,9 +99,9 @@ both free — hitting `https://adhikaar-api-vcnc.onrender.com/health`.
 
 ### A name that is already taken
 
-`ADHIKAAR_CORPUS_DIR` belongs to `src/corpus/loader.py` and points at the
+`YOJNASETU_CORPUS_DIR` belongs to `src/corpus/loader.py` and points at the
 hand-curated NSFDC file, `corpus/v1/schemes.json` — source, shipped with the
-code. The myScheme catalogue uses `ADHIKAAR_CATALOGUE_DIR`. Two different
+code. The myScheme catalogue uses `YOJNASETU_CATALOGUE_DIR`. Two different
 things in this repository are called "the corpus"; setting the wrong one killed
 the container on import, before it served a single request.
 
@@ -131,7 +137,7 @@ The corpus is solved above. The state is the real question, and it is 76 KB —
 which is why the honest answer is "almost anything works".
 
 **Recommended, and free: leave it as SQLite and accept the loss for now.**
-`ADHIKAAR_STATE_DIR=/data` on the container's own filesystem. A redeploy
+`YOJNASETU_STATE_DIR=/data` on the container's own filesystem. A redeploy
 forgets it. For a demo on a Meta *test* number — five pre-registered
 recipients — that is tolerable, and it costs nothing.
 
@@ -171,7 +177,7 @@ Import the repository, set the root directory to `web/`, and add one
 environment variable:
 
 ```
-ADHIKAAR_API_ORIGIN = https://adhikaar-api-vcnc.onrender.com
+YOJNASETU_API_ORIGIN = https://adhikaar-api-vcnc.onrender.com
 ```
 
 `web/next.config.ts` already reads it. Nothing else needs configuring — no
@@ -191,10 +197,10 @@ So that one route goes straight from the browser to Render. Two settings:
 
 ```
 # Vercel
-NEXT_PUBLIC_ADHIKAAR_STREAM_ORIGIN = https://adhikaar-api-vcnc.onrender.com
+NEXT_PUBLIC_YOJNASETU_STREAM_ORIGIN = https://adhikaar-api-vcnc.onrender.com
 
 # Render
-ADHIKAAR_ALLOWED_ORIGINS = https://your-project.vercel.app
+YOJNASETU_ALLOWED_ORIGINS = https://your-project.vercel.app
 ```
 
 Everything else still goes through the rewrite, so this is the only route with

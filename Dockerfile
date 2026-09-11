@@ -1,4 +1,4 @@
-# The Adhikaar AI engine: FastAPI, the discovery corpus, WhatsApp and speech.
+# The Yojna Setu engine: FastAPI, the discovery corpus, WhatsApp and speech.
 #
 # The corpus is fetched at BUILD time, not at boot. On a free tier the service
 # spins down when idle, so anything downloaded at startup is downloaded again
@@ -49,12 +49,12 @@ COPY scripts ./scripts
 # them apart is what stops a deploy replacing the file someone's opt-out lives
 # in.
 #
-# Deliberately NOT ADHIKAAR_CORPUS_DIR. That name already belongs to the
+# Deliberately NOT YOJNASETU_CORPUS_DIR. That name already belongs to the
 # hand-curated NSFDC file at /app/corpus/v1/schemes.json — source, shipped with
 # the code, a different thing entirely. Setting it here pointed that loader at
 # /corpus and the container died on import before serving a single request.
-ENV ADHIKAAR_CATALOGUE_DIR=/catalogue \
-    ADHIKAAR_STATE_DIR=/data
+ENV YOJNASETU_CATALOGUE_DIR=/catalogue \
+    YOJNASETU_STATE_DIR=/data
 
 RUN mkdir -p /data
 

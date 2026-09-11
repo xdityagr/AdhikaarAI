@@ -1,1 +1,1 @@
-# Adhikaar AI — SIH26092 Backend
+# Yojna Setu — SIH26092 Backend

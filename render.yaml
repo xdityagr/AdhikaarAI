@@ -1,4 +1,4 @@
-# Render Blueprint for the Adhikaar AI engine.
+# Render Blueprint for the Yojna Setu engine.
 #
 # The front end is not here. It goes to Vercel, which proxies /api/* to this
 # service through a Next rewrite — so the browser only ever talks to one
@@ -7,7 +7,7 @@
 
 services:
   - type: web
-    name: adhikaar-api
+    name: yojna-setu-api
     runtime: docker
     dockerfilePath: ./Dockerfile
     region: singapore          # closest Render region to India
@@ -32,20 +32,20 @@ services:
 
       # ---- where things live -------------------------------------------
       # The catalogue is baked into the image at /catalogue, never written to.
-      # (ADHIKAAR_CORPUS_DIR is a different setting — leave it unset.)
-      - key: ADHIKAAR_CATALOGUE_DIR
+      # (YOJNASETU_CORPUS_DIR is a different setting — leave it unset.)
+      - key: YOJNASETU_CATALOGUE_DIR
         value: /catalogue
       # State — opt-outs, message idempotency, the geocoding cache. On the free
       # plan this is the container's own filesystem and does NOT survive a
       # deploy or a spin-down. Attach the disk below to fix that.
-      - key: ADHIKAAR_STATE_DIR
+      - key: YOJNASETU_STATE_DIR
         value: /data
 
       # The one route the browser reaches directly. An agent turn takes about
       # twenty seconds and Vercel's Hobby plan cuts a response at ten, so the
       # trace arrived and the answer never did. Set this to the Vercel origin,
       # comma-separated if there is more than one. Named origins only.
-      - key: ADHIKAAR_ALLOWED_ORIGINS
+      - key: YOJNASETU_ALLOWED_ORIGINS
         sync: false
 
       # ---- secrets: set these in the Render dashboard, not here ---------
@@ -78,6 +78,6 @@ services:
     # here that is not merely inconvenient.
     #
     # disk:
-    #   name: adhikaar-state
+    #   name: yojna-setu-state
     #   mountPath: /data
     #   sizeGB: 1

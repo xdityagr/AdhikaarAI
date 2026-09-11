@@ -136,7 +136,7 @@ class TestHandoff:
         assert handoff.claim(code) is None
 
     def test_an_unknown_code_is_refused_quietly(self):
-        assert handoff.claim("ADH-ZZZZZZ") is None
+        assert handoff.claim("YS-ZZZZZZ") is None
 
     def test_it_is_found_inside_a_real_message(self):
         code = handoff.create({})
@@ -152,7 +152,7 @@ class TestHandoff:
         assert handoff.find("") is None
 
     def test_the_code_is_stripped_before_the_model_sees_it(self):
-        """"ADH-4H7K I need help with the loan" is a question about the loan;
+        """"YS-4H7K I need help with the loan" is a question about the loan;
         the code is plumbing."""
         code = handoff.create({})
         cleaned = handoff.strip(f"{code} I need help with the loan", code)
@@ -197,6 +197,6 @@ class TestResume:
 
         user = "919000000098"
         brain._CONTEXT.pop(user, None)
-        remaining = brain._resume_from_web(user, "ADH-ZZZZZZ hello")
+        remaining = brain._resume_from_web(user, "YS-ZZZZZZ hello")
         assert remaining == "hello"
         assert not brain._CONTEXT[user]

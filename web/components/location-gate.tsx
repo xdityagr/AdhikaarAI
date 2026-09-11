@@ -26,7 +26,7 @@ import { cn } from "@/lib/utils";
  */
 /** Ask for the location again, from anywhere. */
 export function askForLocation(): void {
-  window.dispatchEvent(new Event("adhikaar:ask-location"));
+  window.dispatchEvent(new Event("yojnasetu:ask-location"));
 }
 
 export function LocationGate({ states }: { states: string[] }) {
@@ -56,8 +56,8 @@ export function LocationGate({ states }: { states: string[] }) {
   // is remembered; it is not a life sentence.
   useEffect(() => {
     const reopen = () => setOpen(true);
-    window.addEventListener("adhikaar:ask-location", reopen);
-    return () => window.removeEventListener("adhikaar:ask-location", reopen);
+    window.addEventListener("yojnasetu:ask-location", reopen);
+    return () => window.removeEventListener("yojnasetu:ask-location", reopen);
   }, []);
 
   const close = useCallback((remember = true) => {

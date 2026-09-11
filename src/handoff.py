@@ -39,7 +39,7 @@ logger = logging.getLogger(__name__)
 
 ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
 LENGTH = 6
-PREFIX = "ADH"
+PREFIX = "YS"
 
 TTL_SECONDS = 30 * 60
 
@@ -118,7 +118,7 @@ def claim(code: str) -> Optional[Handoff]:
 def strip(text: str, code: str) -> str:
     """The message without the code, so the assistant answers the question.
 
-    Someone who sends "ADH-4H7K I need help with the loan" is asking about the
+    Someone who sends "YS-4H7K I need help with the loan" is asking about the
     loan; the code is plumbing and should never reach the model as though it
     were part of what they said.
     """

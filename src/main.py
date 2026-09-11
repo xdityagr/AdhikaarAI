@@ -62,7 +62,7 @@ async def lifespan(app: FastAPI):
     global _worker
 
     settings = get_settings()
-    logger.info("Starting Adhikaar AI backend...")
+    logger.info("Starting Yojna Setu backend...")
     logger.info("Database: %s", settings.database_path)
     logger.info("Webhook URL: %s/webhook/whatsapp", settings.webhook_base_url)
     logger.info(
@@ -83,12 +83,12 @@ async def lifespan(app: FastAPI):
     _worker = MessageWorker(queue=message_queue)
     await _worker.start()
 
-    logger.info("Adhikaar AI backend ready — listening for WhatsApp messages")
+    logger.info("Yojna Setu backend ready — listening for WhatsApp messages")
 
     yield  # App is running
 
     # Shutdown
-    logger.info("Shutting down Adhikaar AI backend...")
+    logger.info("Shutting down Yojna Setu backend...")
     if _worker:
         await _worker.stop()
     logger.info("Shutdown complete")
@@ -99,7 +99,7 @@ async def lifespan(app: FastAPI):
 # ---------------------------------------------------------------------------
 
 app = FastAPI(
-    title="Adhikaar AI",
+    title="Yojna Setu",
     description="AI-Driven Scheme Matching for NSFDC Credit Schemes — SIH26092",
     version="0.1.0",
     lifespan=lifespan,
@@ -123,7 +123,7 @@ app.include_router(api_router)
 # So the browser is allowed to talk to this service directly for that route.
 # Named origins only — never "*" — and no credentials, because none are used.
 _origins = [
-    o.strip() for o in os.environ.get("ADHIKAAR_ALLOWED_ORIGINS", "").split(",")
+    o.strip() for o in os.environ.get("YOJNASETU_ALLOWED_ORIGINS", "").split(",")
     if o.strip()
 ]
 if _origins:
@@ -173,7 +173,7 @@ async def health_check():
     where = paths.describe()
     return {
         "status": "ok" if where["catalogue_present"] == "True" else "degraded",
-        "service": "adhikaar",
+        "service": "yojnasetu",
         "catalogue": {
             "found": where["catalogue_present"] == "True",
             "size_mb": where["catalogue_mb"],
@@ -233,7 +233,7 @@ async def get_asset(filename: str):
 async def api_info():
     """What this service is, for anything that pings the old root route."""
     return {
-        "name": "Adhikaar AI",
+        "name": "Yojna Setu",
         "description": "AI-Driven Scheme Matching for NSFDC Credit Schemes — SIH26092",
         "landing": "/",
         "portal": "/app",

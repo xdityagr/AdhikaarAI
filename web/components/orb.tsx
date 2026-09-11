@@ -23,7 +23,7 @@ export function Orb({
     <span
       aria-hidden
       data-busy={busy}
-      className={cn("adh-orb block shrink-0", className ?? "size-7")}
+      className={cn("ys-orb block shrink-0", className ?? "size-7")}
     />
   );
 }

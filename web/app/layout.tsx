@@ -50,11 +50,11 @@ const hanken = localFont({
 
 export const metadata: Metadata = {
   title: {
-    default: "Adhikaar AI — find the schemes you actually qualify for",
-    template: "%s · Adhikaar AI",
+    default: "Yojna Setu — find the schemes you actually qualify for",
+    template: "%s · Yojna Setu",
   },
   description:
-    "Adhikaar AI finds the government schemes you qualify for, explains what they " +
+    "Yojna Setu finds the government schemes you qualify for, explains what they " +
     "cost in rupees, and shows you where to go to apply. Built for SC, ST, OBC " +
     "and other marginalised households.",
 };

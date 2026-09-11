@@ -51,8 +51,8 @@ export function LanguageSuggestion() {
       setSuggested(candidate);
     };
 
-    window.addEventListener("adhikaar:place", onPlace);
-    return () => window.removeEventListener("adhikaar:place", onPlace);
+    window.addEventListener("yojnasetu:place", onPlace);
+    return () => window.removeEventListener("yojnasetu:place", onPlace);
   }, [lang]);
 
   if (!suggested) return null;
@@ -119,6 +119,6 @@ export function LanguageSuggestion() {
 export function announcePlace(state: string | null | undefined): void {
   if (!state) return;
   window.dispatchEvent(
-    new CustomEvent("adhikaar:place", { detail: { state } }),
+    new CustomEvent("yojnasetu:place", { detail: { state } }),
   );
 }

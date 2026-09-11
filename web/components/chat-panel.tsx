@@ -79,11 +79,11 @@ const TOOL_ICONS: Record<string, typeof Search> = {
  * conversation appears to stop mid-thought, which is exactly what it looked
  * like.
  *
- * Set NEXT_PUBLIC_ADHIKAAR_STREAM_ORIGIN to the engine's own URL and the
+ * Set NEXT_PUBLIC_YOJNASETU_STREAM_ORIGIN to the engine's own URL and the
  * browser talks to it directly for this call. Left unset — locally, where the
  * dev proxy has no such limit — it stays relative.
  */
-const STREAM_ORIGIN = process.env.NEXT_PUBLIC_ADHIKAAR_STREAM_ORIGIN ?? "";
+const STREAM_ORIGIN = process.env.NEXT_PUBLIC_YOJNASETU_STREAM_ORIGIN ?? "";
 const STREAM_URL = `${STREAM_ORIGIN}/api/agent/stream`;
 
 export function ChatPanel({
@@ -452,8 +452,8 @@ export function ChatPanel({
                   <p className="text-[0.9375rem] text-muted-foreground">
                     {t("chat.thinking")}
                   </p>
-                  <span className="adh-shimmer block h-2 w-full max-w-sm rounded-full" />
-                  <span className="adh-shimmer block h-2 w-2/3 max-w-xs rounded-full" />
+                  <span className="ys-shimmer block h-2 w-full max-w-sm rounded-full" />
+                  <span className="ys-shimmer block h-2 w-2/3 max-w-xs rounded-full" />
                 </div>
               </div>
             </div>

@@ -17,7 +17,7 @@ import type { Lang } from "@/lib/i18n/config";
 export const metadata = {
   title: "All schemes",
   description:
-    "Browse every welfare and credit scheme in the Adhikaar AI corpus, filtered " +
+    "Browse every welfare and credit scheme in the Yojna Setu corpus, filtered " +
     "by category, state and level of government.",
 };
 

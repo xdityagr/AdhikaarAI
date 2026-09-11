@@ -72,7 +72,7 @@ API_BASE = "https://api.myscheme.gov.in"
 API_KEY = "tYTy5eEhlu9rFjyxuCr7ra7ACp4dv1RH8gWuHTDc"
 
 USER_AGENT = (
-    "AdhikaarAI/0.2 (+https://github.com/xdityagr/AdhikaarAI; "
+    "YojnaSetu/0.2 (+https://github.com/xdityagr/AdhikaarAI; "
     "SIH 2026 PS26092; welfare scheme discovery for NSFDC beneficiaries)"
 )
 

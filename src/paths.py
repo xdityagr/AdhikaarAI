@@ -34,17 +34,17 @@ def _dir(name: str, default: str) -> Path:
 
 #: The myScheme catalogue — schemes.db. Read-only, baked into the image.
 #:
-#: NOT `ADHIKAAR_CORPUS_DIR`. That name was already taken, by
+#: NOT `YOJNASETU_CORPUS_DIR`. That name was already taken, by
 #: `src/corpus/loader.py`, for the hand-curated NSFDC file at
 #: corpus/v1/schemes.json — a different thing entirely, and source rather than
 #: a build artefact. Reusing it pointed the NSFDC loader at /corpus and the
 #: container would not start. Two things in this repository are called "the
 #: corpus"; this is the other one, and the codebase already calls it the
 #: catalogue everywhere it is served (`/api/catalog`, `src/catalog.py`).
-CATALOGUE_DIR = _dir("ADHIKAAR_CATALOGUE_DIR", "data")
+CATALOGUE_DIR = _dir("YOJNASETU_CATALOGUE_DIR", "data")
 
 #: Read-write, and the thing that needs to outlive a deploy.
-STATE_DIR = _dir("ADHIKAAR_STATE_DIR", "data")
+STATE_DIR = _dir("YOJNASETU_STATE_DIR", "data")
 
 #: Rendered map images and the tile cache. Regenerable, so losing them costs a
 #: little latency and nothing else — they stay with the state directory rather
@@ -53,7 +53,7 @@ MEDIA_DIR = STATE_DIR / "maps"
 TILE_DIR = STATE_DIR / "tiles"
 
 CATALOGUE_DB = CATALOGUE_DIR / "schemes.db"
-STATE_DB = STATE_DIR / "adhikaar.db"
+STATE_DB = STATE_DIR / "yojnasetu.db"
 GEO_CACHE_DB = STATE_DIR / "geo-cache.db"
 
 

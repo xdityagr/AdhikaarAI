@@ -41,7 +41,7 @@ from src.paths import GEO_CACHE_DB as CACHE_PATH
 # usage policy in particular requires a real contact address, and being a good
 # citizen of a free service is the price of using it.
 USER_AGENT = (
-    "AdhikaarAI/0.1 (government scheme access for marginalised households; "
+    "YojnaSetu/0.1 (government scheme access for marginalised households; "
     "+https://github.com/xdityagr/AdhikaarAI)"
 )
 

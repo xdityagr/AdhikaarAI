@@ -71,7 +71,7 @@ interface Application {
   stageIndex: number;
 }
 
-const STORAGE_KEY = "adhikaar.applications";
+const STORAGE_KEY = "yojnasetu.applications";
 
 /* ---------------------------------------------------------------------------
  * Applications live in localStorage — we deliberately never receive them — so

@@ -1,4 +1,4 @@
-# MVP Plan & Pitch — Adhikaar AI
+# MVP Plan & Pitch — Yojna Setu
 
 **Target: a 4-minute pitch that wins the room, plus Q&A.**
 Companion to `PRD-v3.md` (features), `data-sources.md` (corpus), `BUSINESS-PLAN.md` (scale story).
@@ -120,7 +120,7 @@ larger half of the demo.
 | **Provenance-stamped corpus** | Every scheme number carries its source URL and fetch date. This is what makes "we read the source" checkable rather than a claim |
 | **Declarative scraper** | `data-sources.md` §7 — a source registry plus extractor strategies, not twenty bespoke scripts |
 | **Aadhaar demo mode** | A clearly-labelled demonstration certificate so reveal 3 is showable without UIDAI's real cert, and never presented as UIDAI's |
-| **Custom-element library** | `src/web/adhikaar.js` — the cards render from API data, so adding a card type is a server change |
+| **Custom-element library** | `src/web/yojnasetu.js` — the cards render from API data, so adding a card type is a server change |
 
 ### 2.4 Bugs found and fixed — say these if asked what went wrong
 
@@ -258,6 +258,6 @@ The model writes the greeting, nothing else.
 
 ## 7. The one-sentence version
 
-> Every other platform tells you which scheme you *might* qualify for. Adhikaar AI proves you qualify, tells you what the loan actually costs against the moneylender you'd otherwise use, and routes you to a partner that can actually disburse this month — in your own language, in your own script.
+> Every other platform tells you which scheme you *might* qualify for. Yojna Setu proves you qualify, tells you what the loan actually costs against the moneylender you'd otherwise use, and routes you to a partner that can actually disburse this month — in your own language, in your own script.
 
 *(The earlier version of this line ended "by voice if you can't read". Voice is not built. Do not say it.)*

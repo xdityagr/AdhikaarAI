@@ -5,7 +5,7 @@ import type { NextConfig } from "next";
  * Rewriting /api/* onto it means the browser only ever talks to one origin, so
  * there is no CORS layer to configure and no preflight on every call.
  */
-const API_ORIGIN = process.env.ADHIKAAR_API_ORIGIN ?? "http://127.0.0.1:8001";
+const API_ORIGIN = process.env.YOJNASETU_API_ORIGIN ?? "http://127.0.0.1:8001";
 
 const nextConfig: NextConfig = {
   async rewrites() {
