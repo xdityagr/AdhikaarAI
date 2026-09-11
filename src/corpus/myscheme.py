@@ -307,6 +307,17 @@ _ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
         ("land_landless_required", "INTEGER"),
         ("land_unquantified", "INTEGER"),
         ("land_evidence", "TEXT"),          # JSON array of sentences
+        # Assets other than land, from `src.corpus.assets`. Stored as two JSON
+        # arrays rather than a column per asset because the vocabulary is
+        # closed and small, and a column per asset would be six migrations to
+        # add a seventh. Housing dominates: most of these are schemes that
+        # exist to give somebody a house and say so by excluding people who
+        # already have one.
+        ("assets_must_not_own", "TEXT"),    # JSON array of asset kinds
+        ("assets_must_own", "TEXT"),        # JSON array of asset kinds
+        ("assets_family_scope", "INTEGER"),
+        ("assets_unquantified", "INTEGER"),
+        ("assets_evidence", "TEXT"),        # JSON array of sentences
     ],
 }
 

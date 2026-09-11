@@ -82,6 +82,14 @@ class Facets:
     #: Land held, in acres. Read out of prose by `src.corpus.land`, so it is the
     #: only facet whose corpus side was extracted rather than published.
     land_acres: Optional[float] = None
+    #: Things owned, from `src.corpus.assets` — the other half of the same job.
+    #: `owns_pucca_house` is separate from `owns_house` and not derived from it:
+    #: a family in a kutcha hut owns a house and does not own a pucca one, and
+    #: collapsing the two denies them every housing scheme they are entitled to.
+    owns_house: Optional[bool] = None
+    owns_pucca_house: Optional[bool] = None
+    owns_vehicle: Optional[bool] = None
+    owns_boat: Optional[bool] = None
     categories: list[str] = field(default_factory=list)
 
 
@@ -141,13 +149,18 @@ def open_corpus(path: Path = CORPUS_PATH) -> Optional[sqlite3.Connection]:
     return conn
 
 
-def _has_land_columns(conn: sqlite3.Connection) -> bool:
-    """Whether this corpus was built after the land extraction pass."""
+def _extracted_columns(conn: sqlite3.Connection) -> set[str]:
+    """Which prose-extraction passes this corpus was built after.
+
+    The corpus is pinned by release tag, so running against an older one is
+    normal rather than exceptional — land and assets were added in different
+    releases, and a corpus may have either, both or neither.
+    """
     try:
-        columns = {row[1] for row in conn.execute("PRAGMA table_info(scheme_eligibility)")}
+        return {row[1] for row in
+                conn.execute("PRAGMA table_info(scheme_eligibility)")}
     except sqlite3.Error:
-        return False
-    return "land_max_acres" in columns
+        return set()
 
 
 def _load_facet_index(conn: sqlite3.Connection) -> dict[str, dict[str, set[str]]]:
@@ -389,6 +402,85 @@ def _check_land(row: sqlite3.Row, acres: Optional[float],
     return True
 
 
+#: The facet field each extracted asset is checked against.
+_ASSET_FACETS = {
+    "house": "owns_house",
+    "pucca_house": "owns_pucca_house",
+    "vehicle": "owns_vehicle",
+    "boat": "owns_boat",
+}
+
+#: What a person is told the rule was about. Translated in the interface via
+#: `FACET_LABELS`; these are the engine-side keys, like every other label here.
+_ASSET_LABELS = {
+    "house": "house", "pucca_house": "pucca house",
+    "vehicle": "vehicle", "boat": "boat",
+}
+
+
+def _check_assets(row: sqlite3.Row, facets: "Facets",
+                  match: DiscoveryMatch) -> bool:
+    """Owning a house, a vehicle, a boat — the other half of the prose job.
+
+    Same three outcomes as `_check_land`, and the same reasoning behind each:
+
+    - a rule we read, and an answer: compare, and exclude on a definite clash
+    - a rule we read, and no answer: `unknown`, because absence is not negation
+    - `assets_unquantified`: the scheme HAS an asset condition we could not
+      reduce to yes or no — a permitted count, a conditional, a disqualification
+      written back to front. It must never exclude anyone and must not be silent
+      either, or somebody travels to an office to be turned away by a rule we
+      had read and swallowed.
+
+    `must_own` matters as much as `must_not_own` and is not a mirror of it. A
+    subsidy for an aquarium requires somewhere to put it; every fisheries scheme
+    here requires a registered boat. Those are requirements a person can fail.
+    """
+    keys = row.keys()
+    if "assets_must_not_own" not in keys:
+        return True                       # corpus predates the extraction pass
+
+    forbidden = _json_list(row["assets_must_not_own"])
+    required = _json_list(row["assets_must_own"])
+    unreadable = row["assets_unquantified"]
+
+    if not (forbidden or required or unreadable):
+        return True
+
+    checked = False
+    for kind in forbidden:
+        field_name = _ASSET_FACETS.get(kind)
+        owns = getattr(facets, field_name, None) if field_name else None
+        label = _ASSET_LABELS.get(kind, kind)
+        if owns is None:
+            match.unknown.append(label)
+            continue
+        if owns:
+            match.unmet.append(label)
+            return False
+        match.matched_on.append(label)
+        checked = True
+
+    for kind in required:
+        field_name = _ASSET_FACETS.get(kind)
+        owns = getattr(facets, field_name, None) if field_name else None
+        label = _ASSET_LABELS.get(kind, kind)
+        if owns is None:
+            match.unknown.append(label)
+            continue
+        if not owns:
+            match.unmet.append(label)
+            return False
+        match.matched_on.append(label)
+        checked = True
+
+    if unreadable and not checked:
+        # We know there is a rule and not what it says. Say so.
+        match.unknown.append("assets")
+
+    return True
+
+
 #: myScheme spells "no upper limit" as 100 and "no lower limit" as 0, so a band
 #: of 0–100 is not a band at all. 327 schemes carry exactly that.
 _AGE_FLOOR = 0
@@ -507,15 +599,20 @@ def discover(
         # older release — and the corpus is pinned by tag, so an older release
         # is a completely normal thing to be running against. `_check_land`
         # already tolerates their absence; the SELECT has to as well.
-        have_land = _has_land_columns(conn)
+        columns = _extracted_columns(conn)
         land_columns = (""",
                       e.land_min_acres, e.land_max_acres,
-                      e.land_landless_required, e.land_unquantified""" if have_land else "")
+                      e.land_landless_required, e.land_unquantified"""
+                        if "land_max_acres" in columns else "")
+        asset_columns = (""",
+                      e.assets_must_not_own, e.assets_must_own,
+                      e.assets_family_scope, e.assets_unquantified"""
+                         if "assets_must_not_own" in columns else "")
         rows = conn.execute(
             f"""SELECT s.slug, s.name, s.level, s.state, s.categories, s.brief,
                       s.eligibility_md,
                       e.family_income_min, e.family_income_max,
-                      e.age_min, e.age_max{land_columns}
+                      e.age_min, e.age_max{land_columns}{asset_columns}
                FROM schemes s
                LEFT JOIN scheme_eligibility e ON e.slug = s.slug"""
         ).fetchall()
@@ -551,6 +648,7 @@ def discover(
             _check_income(row, facets.family_income, match),
             _check_age(row, facets.age, match),
             _check_land(row, facets.land_acres, match),
+            _check_assets(row, facets, match),
         ]
 
         # A state-specific scheme only serves its own state.
@@ -617,11 +715,26 @@ def evaluate_scheme(
     if conn is None:
         return None
     try:
+        # The extracted columns are selected here for the same reason they are
+        # in `discover`, and they were missing: this route answers "do I qualify
+        # for THIS one", which is the question asked with a scheme name already
+        # in hand — and it was returning LIKELY for a housing scheme to somebody
+        # who owns a pucca house, and for a land-capped scheme to somebody over
+        # the ceiling, because the rule was never read into the row.
+        columns = _extracted_columns(conn)
+        land_columns = (""",
+                      e.land_min_acres, e.land_max_acres,
+                      e.land_landless_required, e.land_unquantified"""
+                        if "land_max_acres" in columns else "")
+        asset_columns = (""",
+                      e.assets_must_not_own, e.assets_must_own,
+                      e.assets_family_scope, e.assets_unquantified"""
+                         if "assets_must_not_own" in columns else "")
         row = conn.execute(
-            """SELECT s.slug, s.name, s.level, s.state, s.categories, s.brief,
+            f"""SELECT s.slug, s.name, s.level, s.state, s.categories, s.brief,
                       s.eligibility_md,
                       e.family_income_min, e.family_income_max,
-                      e.age_min, e.age_max
+                      e.age_min, e.age_max{land_columns}{asset_columns}
                FROM schemes s
                LEFT JOIN scheme_eligibility e ON e.slug = s.slug
                WHERE s.slug = ?""",
@@ -648,6 +761,8 @@ def evaluate_scheme(
     checks += [
         _check_income(row, facets.family_income, match),
         _check_age(row, facets.age, match),
+        _check_land(row, facets.land_acres, match),
+        _check_assets(row, facets, match),
     ]
     if row["state"] and facets.state and row["state"].strip().lower() not in ("all", ""):
         if row["state"].strip().lower() != facets.state.strip().lower():
