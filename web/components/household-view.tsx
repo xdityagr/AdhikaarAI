@@ -302,6 +302,12 @@ function SharedPanel({
           value={shared.is_bpl}
           onSelect={(v) => set("is_bpl", v)}
         />
+        <OptionRow
+          label={t("check.q.puccaHouse")}
+          options={YES_NO}
+          value={shared.owns_pucca_house}
+          onSelect={(v) => set("owns_pucca_house", v)}
+        />
       </div>
     </section>
   );

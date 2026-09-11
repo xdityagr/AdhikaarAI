@@ -153,6 +153,12 @@ export const en = {
   "check.q.bpl": "Do you have a BPL card?",
   "check.q.disability": "Does anyone in the household have a disability?",
   "check.q.student": "Are you studying?",
+  // "Pucca" rather than "a house", because that is the word the schemes use
+  // and the distinction is the whole point: nearly every housing scheme
+  // excludes people who already have an all-weather house, and a family in a
+  // kutcha hut is exactly who it was written for.
+  "check.q.puccaHouse": "Does your household own a pucca (all-weather) house?",
+  "check.q.boat": "Do you own a registered fishing boat?",
   "check.q.marital": "Marital status",
   "check.q.employment": "Work",
   "check.q.occupation": "What work do you do?",
@@ -532,5 +538,22 @@ export const en = {
   "field.year": "Year of study",
   "apply.note.no_fee": "No fee is required to apply for a government scheme. Nobody should ask you for money to fill this in.",
   "apply.note.no_documents": "This scheme has not published its document list. Carry proof of identity, address, category and income, and ask at the office what else is needed.",
-  "apply.note.no_steps": "This scheme has not published its steps. The official page is linked above and is the same source we use."
+  "apply.note.no_steps": "This scheme has not published its steps. The official page is linked above and is the same source we use.",
+  "chat.card.aimed": "aimed at you, of {total} possible",
+  "chat.card.matchedOn": "matched on {facets}",
+  "chat.card.found": "{count} found",
+  "chat.card.compare": "{label} → {amount} on the same {loan}. You keep {saving}.",
+  "chat.card.years": "{years} yr",
+  "chat.card.km": "{km} km",
+  "documents.capture.take": "Take the photo",
+  "documents.capture.open": "Open the camera",
+  "documents.capture.choose": "Choose a photo",
+  "footer.source.myscheme": "myScheme (Govt. of India)",
+  "footer.source.pfms": "PFMS — payment status",
+  "site.description": "Yojna Setu finds the government schemes you qualify for, explains what they cost in rupees, and shows you where to go to apply. Built for SC, ST, OBC and other marginalised households.",
+  "notfound.back": "Or go back to the {home}.",
+  "partners.npa": "Net NPA {rate}%",
+  "partners.estimated": "our own estimate, not NSFDC's figure",
+  "schemes.unavailable": "The scheme list is not available right now. It is a local copy that may be rebuilding — searching again in a minute usually works.",
+  "category.rebuilding": "The scheme list is being rebuilt. Browse or search directly in the meantime.",
 } as const;

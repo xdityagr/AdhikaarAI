@@ -266,6 +266,18 @@ export function CheckForm({
               value={answers.is_student}
               onSelect={(value) => set("is_student", value)}
             />
+            {/* Seventeen schemes turn on this one — nearly every housing
+                scheme exists to give somebody a house and says so by
+                excluding people who already have one. "Pucca" is asked
+                rather than "a house" because that is the word the schemes
+                use, and a family in a kutcha hut is exactly who they are
+                for. */}
+            <OptionRow
+              label={t("check.q.puccaHouse")}
+              options={YES_NO}
+              value={answers.owns_pucca_house}
+              onSelect={(value) => set("owns_pucca_house", value)}
+            />
             <OptionRow
               label={t("check.q.marital")}
               options={MARITAL}
@@ -278,6 +290,19 @@ export function CheckForm({
               value={answers.employment_status}
               onSelect={(value) => set("employment_status", value)}
             />
+            {/* Only asked of fishermen. Nineteen schemes require a registered
+                boat and every one of them is a fisheries scheme, so putting
+                the question to everybody would be nineteen schemes' worth of
+                value bought with a question the other four thousand have no
+                use for. */}
+            {answers.occupation === "Fishermen" ? (
+              <OptionRow
+                label={t("check.q.boat")}
+                options={YES_NO}
+                value={answers.owns_boat}
+                onSelect={(value) => set("owns_boat", value)}
+              />
+            ) : null}
             <div>
               <Label htmlFor="occupation" className="text-sm font-medium">
                 {t("check.q.occupation")}

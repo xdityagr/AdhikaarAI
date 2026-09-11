@@ -386,6 +386,14 @@ class DiscoverRequest(BaseModel):
     is_student: Optional[bool] = None
     occupation: Optional[str] = None
     employment_status: Optional[str] = None
+    #: Assets, read out of prose by `src.corpus.assets`. `owns_house` is not
+    #: derived from `owns_pucca_house` here — the interface derives the one
+    #: direction that is sound (a pucca house IS a house) and leaves the other
+    #: unanswered, because "no pucca house" says nothing about a kutcha one.
+    owns_pucca_house: Optional[bool] = None
+    owns_house: Optional[bool] = None
+    owns_vehicle: Optional[bool] = None
+    owns_boat: Optional[bool] = None
     categories: list[str] = Field(default_factory=list)
     limit: int = Field(default=40, ge=1, le=200)
     # The language the results are read in. Scheme names and summaries come back
@@ -452,6 +460,10 @@ async def discover_schemes(request: DiscoverRequest) -> dict:
         is_student=request.is_student,
         occupation=request.occupation,
         employment_status=request.employment_status,
+        owns_pucca_house=request.owns_pucca_house,
+        owns_house=request.owns_house,
+        owns_vehicle=request.owns_vehicle,
+        owns_boat=request.owns_boat,
         categories=request.categories,
     )
 
@@ -621,6 +633,14 @@ class SchemeEligibilityRequest(BaseModel):
     occupation: Optional[str] = None
     employment_status: Optional[str] = None
     marital_status: Optional[str] = None
+    #: Assets, read out of prose by `src.corpus.assets`. `owns_house` is not
+    #: derived from `owns_pucca_house` here — the interface derives the one
+    #: direction that is sound (a pucca house IS a house) and leaves the other
+    #: unanswered, because "no pucca house" says nothing about a kutcha one.
+    owns_pucca_house: Optional[bool] = None
+    owns_house: Optional[bool] = None
+    owns_vehicle: Optional[bool] = None
+    owns_boat: Optional[bool] = None
     #: Read in this language. Not a facet — it is stripped before matching.
     lang: str = "en"
 

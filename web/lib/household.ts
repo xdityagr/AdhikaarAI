@@ -49,6 +49,9 @@ export interface Shared {
   caste?: string;
   family_income?: string;
   is_bpl?: string;
+  /** A house belongs to the house. Asking each member whether the family owns
+   *  one would be four answers to one question. */
+  owns_pucca_house?: string;
 }
 
 /** The facets that differ from person to person. */
@@ -72,6 +75,7 @@ export interface Household {
 
 export const SHARED_KEYS = [
   "state", "residence", "caste", "family_income", "is_bpl",
+  "owns_pucca_house",
 ] as const;
 
 export const MEMBER_KEYS = [

@@ -368,5 +368,17 @@ export const facetLabel = (lang: Lang, name: string) =>
  *  in a right-to-left line is both wrong and visually jarring. */
 const SEPARATOR: Partial<Record<Lang, string>> = { ur: "، " };
 
+/**
+ * Join things that are already in the reader's language.
+ *
+ * Separate from `facetList` because not every list is a list of facets. The
+ * assistant's apply card lists the blanks left in a form, and it was joining
+ * them with a hardcoded ", " — the same Latin comma in an Urdu line that
+ * `SEPARATOR` exists to stop. Anything joining a list for a sentence should
+ * come through here rather than write its own comma.
+ */
+export const listJoin = (lang: Lang, parts: string[]) =>
+  parts.filter(Boolean).join(SEPARATOR[lang] ?? ", ");
+
 export const facetList = (lang: Lang, names: string[]) =>
-  names.map((n) => facetLabel(lang, n)).join(SEPARATOR[lang] ?? ", ");
+  listJoin(lang, names.map((n) => facetLabel(lang, n)));

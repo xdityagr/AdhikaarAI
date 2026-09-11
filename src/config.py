@@ -155,6 +155,38 @@ class Settings(BaseSettings):
         description="Model for generation on cache miss"
     )
 
+    # --- Inbound voice (Phase C) ---
+    #
+    # The number people ring. Inbound only — nobody is called unprompted — so
+    # there is no outbound credential here and that absence is deliberate.
+    vapi_api_key: str = Field(
+        default="",
+        description="Vapi private API key, for managing the assistant and number",
+    )
+    vapi_webhook_secret: str = Field(
+        default="",
+        description="A string we choose and paste into Vapi's credential config. "
+                    "Every /api/voice/* request is checked against it.",
+    )
+    vapi_phone_number_id: str = Field(
+        default="",
+        description="Vapi's id for the provisioned inbound number (not the number)",
+    )
+    vapi_signature_header: str = Field(
+        default="x-vapi-signature",
+        description="Header carrying the HMAC-SHA256 of the raw body, when the "
+                    "credential is configured for HMAC rather than a bearer token",
+    )
+    vapi_timestamp_header: str = Field(
+        default="x-vapi-signature-timestamp",
+        description="Optional header signed alongside the body for replay protection",
+    )
+    voice_verify_signatures: bool = Field(
+        default=True,
+        description="Verify every voice webhook. Disable only for local testing — "
+                    "these routes run the matching engine.",
+    )
+
     sarvam_api_key: str = Field(
         default="",
         description="Sarvam AI — primary speech-to-text, built for Indian languages",
