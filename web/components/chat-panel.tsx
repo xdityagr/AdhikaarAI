@@ -27,6 +27,8 @@ import {
 
 import { useLanguage } from "@/components/language-provider";
 import { readPlaceCookie } from "@/lib/i18n/config";
+import { formatNumber } from "@/lib/i18n";
+import { facetLabel, facetList, listJoin } from "@/lib/i18n/vocabulary";
 import { MapCard } from "@/components/map-card";
 import { Markdown } from "@/components/markdown";
 import { Orb } from "@/components/orb";
@@ -736,6 +738,10 @@ function CardView({
   card: Card;
   t: (key: never, vars?: Record<string, string | number>) => string;
 }) {
+  // The language itself, not only a translator bound to it: the facets and the
+  // list separators are data the engine emits, and translating those goes
+  // through `vocabulary.ts` rather than through a locale file.
+  const { lang } = useLanguage();
   const s = (key: string) => card[key] as string | undefined;
   const n = (key: string) => card[key] as number | undefined;
   const tr = t as unknown as (key: string) => string;
@@ -761,7 +767,9 @@ function CardView({
               {(card.targeted as number)?.toLocaleString("en-IN")}
             </span>
             <span className="text-sm text-muted-foreground">
-              aimed at you, of {(card.total as number)?.toLocaleString("en-IN")} possible
+              {tv("chat.card.aimed", {
+                total: formatNumber(lang, (card.total as number) ?? 0),
+              })}
             </span>
           </div>
           <ul className="mt-3 space-y-2">
@@ -774,8 +782,15 @@ function CardView({
                   {item.name}
                 </Link>
                 <p className="text-xs text-muted-foreground">
+                  {/* The facets are the engine's own field names. Rendered raw
+                      they produced "matched on gender, age" inside an otherwise
+                      translated line — and a Latin comma in an Urdu one. */}
                   {[item.state && item.state !== "All" ? item.state : null,
-                    item.matched_on.length ? `matched on ${item.matched_on.join(", ")}` : null]
+                    item.matched_on.length
+                      ? tv("chat.card.matchedOn", {
+                          facets: facetList(lang, item.matched_on),
+                        })
+                      : null]
                     .filter(Boolean)
                     .join(" · ")}
                 </p>
@@ -794,7 +809,9 @@ function CardView({
       return (
         <div className="rounded-xl border border-border bg-card p-4">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            {(card.total as number)?.toLocaleString("en-IN")} found
+            {tv("chat.card.found", {
+              count: formatNumber(lang, (card.total as number) ?? 0),
+            })}
             {s("title") ? ` · ${s("title")}` : ""}
           </p>
           <ul className="mt-3 divide-y divide-border">
@@ -854,8 +871,15 @@ function CardView({
                   blocked ? "text-clay" : "text-verified",
                 )}
               >
+                {/* `results.notMatchedOn` is "does not meet the condition on
+                    {facets}" — one clause, so each language can put the list
+                    where its own grammar wants it. Concatenating the facets onto
+                    the end instead printed the literal "{facets}" followed by
+                    untranslated English field names, in all thirteen. */}
                 {blocked
-                  ? tr("results.notMatchedOn") + " " + unmet.join(", ")
+                  ? tv("results.notMatchedOn", {
+                      facets: facetList(lang, unmet),
+                    })
                   : tr(`results.strength.${verdict === "CHECK" ? "check" : "likely"}`)}
               </p>
             </div>
@@ -867,20 +891,29 @@ function CardView({
             {meets.map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <BadgeCheck className="size-3.5 shrink-0 text-verified" />
-                <dt className="text-muted-foreground">{item}</dt>
+                <dt className="text-muted-foreground">
+                  {facetLabel(lang, item)}
+                </dt>
               </div>
             ))}
             {unmet.map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <XCircle className="size-3.5 shrink-0 text-clay" />
-                <dt className="font-medium text-clay">{item}</dt>
+                <dt className="font-medium text-clay">
+                  {facetLabel(lang, item)}
+                </dt>
               </div>
             ))}
             {unknown.map((item) => (
               <div key={item} className="flex items-center gap-2">
                 <CircleHelp className="size-3.5 shrink-0 text-gold-ink" />
+                {/* `.label` rather than the sentence: `results.stillToCheck` is
+                    "Still to check: {facets}" and belongs in a heading, not
+                    after one facet. Lowercasing it was doing nothing in any
+                    Indic script and printing a literal "{facets}" in all of
+                    them. The results page already uses this key this way. */}
                 <dt className="text-muted-foreground">
-                  {item} — {tr("results.stillToCheck").toLowerCase()}
+                  {facetLabel(lang, item)} — {tr("results.stillToCheck.label")}
                 </dt>
               </div>
             ))}
@@ -908,7 +941,8 @@ function CardView({
           </p>
           {blanks.length ? (
             <p className="mt-1.5 line-clamp-2 text-sm text-muted-foreground">
-              {tv("apply.blanksLeft", { n: blanks.length })}: {blanks.join(", ")}
+              {tv("apply.blanksLeft", { n: blanks.length })}:{" "}
+              {listJoin(lang, blanks)}
             </p>
           ) : null}
           {docs.length ? (
@@ -955,7 +989,8 @@ function CardView({
             ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">
-            {s("loan")} · {n("rate")}% · {n("years")} yr
+            {s("loan")} · {n("rate")}% ·{" "}
+            {tv("chat.card.years", { years: n("years") ?? 0 })}
           </p>
           <dl className="mt-3 grid grid-cols-2 gap-2 text-sm">
             <div className="rounded-lg bg-muted/60 px-3 py-2">
@@ -984,8 +1019,12 @@ function CardView({
             {s("alt_label")} → {s("alt_amount")}
           </p>
           <p className="mt-1 text-sm text-clay/90">
-            {s("scheme_label")} → {s("scheme_amount")} on the same {s("loan")}. You
-            keep {s("saving")}.
+            {tv("chat.card.compare", {
+              label: s("scheme_label") ?? "",
+              amount: s("scheme_amount") ?? "",
+              loan: s("loan") ?? "",
+              saving: s("saving") ?? "",
+            })}
           </p>
         </div>
       );
@@ -1039,7 +1078,7 @@ function CardView({
                 <p className="text-muted-foreground">
                   {[item.where,
                     item.distance_km !== null && item.distance_km !== undefined
-                      ? `${item.distance_km} km`
+                      ? tv("chat.card.km", { km: item.distance_km })
                       : null,
                     item.rate !== undefined ? `${item.rate}%` : null]
                     .filter(Boolean)

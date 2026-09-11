@@ -94,9 +94,15 @@ export interface Answers {
   marital_status?: string;
   employment_status?: string;
   occupation?: string;
+  /** Owning things, read out of scheme prose by `src/corpus/assets.py`.
+   *  Kept as "yes"/"no" strings like every other answer here so the option
+   *  rows and the query string need no special case. */
+  owns_pucca_house?: string;
+  owns_boat?: string;
 }
 
-const BOOLEAN_KEYS = ["is_bpl", "disability", "is_student"] as const;
+const BOOLEAN_KEYS = ["is_bpl", "disability", "is_student",
+                      "owns_pucca_house", "owns_boat"] as const;
 
 /**
  * Answers to a request body.
@@ -125,6 +131,14 @@ export function answersToPayload(answers: Answers): Record<string, unknown> {
     }
     payload[key] = value;
   }
+
+  // A pucca house IS a house, so answering yes to the narrow question also
+  // answers the wide one — and seventeen schemes split across the two.
+  //
+  // The reverse is NOT derived, deliberately. "No pucca house" says nothing
+  // about a kutcha one, and asserting owns_house=false there would hand a
+  // definite answer to a question nobody asked.
+  if (payload.owns_pucca_house === true) payload.owns_house = true;
 
   return payload;
 }
@@ -160,7 +174,7 @@ export function queryToAnswers(params: {
   for (const key of [
     "state", "residence", "caste", "gender", "age", "family_income",
     "is_bpl", "disability", "is_student", "marital_status",
-    "employment_status", "occupation",
+    "employment_status", "occupation", "owns_pucca_house", "owns_boat",
   ] as const) {
     const value = single(key);
     if (value) answers[key] = value;

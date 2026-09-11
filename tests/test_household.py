@@ -42,9 +42,16 @@ class TestTheSplit:
     def test_the_house_owns_what_the_house_owns(self):
         """Income, state, residence and the ration card are the same number and
         the same card whoever is asking, and a scheme's income ceiling is
-        written against the household anyway."""
+        written against the household anyway.
+
+        A pucca house is here for the same reason and is not a per-person
+        answer: asking four members whether the family owns a house is four
+        answers to one question, and the schemes that turn on it — nearly every
+        housing scheme — write the rule against the household too.
+        """
         assert set(SHARED) == {
-            "state", "residence", "caste", "family_income", "is_bpl"}
+            "state", "residence", "caste", "family_income", "is_bpl",
+            "owns_pucca_house"}
 
     def test_the_person_owns_what_varies(self):
         """These are exactly the facets that decide which member can claim

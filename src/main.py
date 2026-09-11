@@ -31,6 +31,7 @@ from src.database import init_database
 from src import whatsapp_consent as consent
 from src.api import router as api_router
 from src.webhook import router as webhook_router, set_message_queue
+from src.voice import router as voice_router
 from src.worker import MessageWorker
 
 # ---------------------------------------------------------------------------
@@ -115,6 +116,7 @@ app = FastAPI(
 # Mount routes
 app.include_router(webhook_router)
 app.include_router(api_router)
+app.include_router(voice_router)
 
 
 # ---------------------------------------------------------------------------
