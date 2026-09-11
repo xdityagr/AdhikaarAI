@@ -459,4 +459,7 @@ export const kn: Strings = {
   "track.official.dbt.body": "ಯಾವ ಯೋಜನೆಗಳು ನೇರವಾಗಿ ಖಾತೆಗೆ ಪಾವತಿಸುತ್ತವೆ, ಮತ್ತು ಅವುಗಳ ಸ್ಥಿತಿ ಪುಟಗಳು.",
   "track.official.cpgrams.body": "ಅಧಿಕೃತ ದೂರು ಮಾರ್ಗ. ಪ್ರತಿ ಸಚಿವಾಲಯವೂ ಉತ್ತರಿಸಲೇಬೇಕು.",
   "results.stillToCheck.label": "ಇನ್ನೂ ಪರಿಶೀಲಿಸಬೇಕು",
+  "apply.mode.online": "ಆನ್‌ಲೈನ್‌ನಲ್ಲಿ",
+  "apply.mode.offline": "ಖುದ್ದಾಗಿ ಹೋಗಿ",
+  "apply.mode.both": "ಆನ್‌ಲೈನ್‌ನಲ್ಲಿ ಅಥವಾ ಖುದ್ದಾಗಿ ಹೋಗಿ",
 };

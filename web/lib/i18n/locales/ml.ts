@@ -459,4 +459,7 @@ export const ml: Strings = {
   "track.official.dbt.body": "ഏതൊക്കെ പദ്ധതികൾ നേരിട്ട് അക്കൗണ്ടിൽ പണം നൽകുന്നു, അവയുടെ സ്ഥിതി പേജുകൾ.",
   "track.official.cpgrams.body": "ഔദ്യോഗിക പരാതി മാർഗം. എല്ലാ മന്ത്രാലയവും മറുപടി നൽകിയേ തീരൂ.",
   "results.stillToCheck.label": "ഇനിയും പരിശോധിക്കണം",
+  "apply.mode.online": "ഓൺലൈനായി",
+  "apply.mode.offline": "നേരിട്ട് ചെന്ന്",
+  "apply.mode.both": "ഓൺലൈനായോ നേരിട്ട് ചെന്നോ",
 };

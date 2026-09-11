@@ -459,4 +459,7 @@ export const or: Strings = {
   "track.official.dbt.body": "କେଉଁ ଯୋଜନା ସିଧାସଳଖ ଖାତାକୁ ଦେୟ ଦିଏ, ଏବଂ ସେଗୁଡ଼ିକର ସ୍ଥିତି ପୃଷ୍ଠା।",
   "track.official.cpgrams.body": "ସରକାରୀ ଅଭିଯୋଗ ମାଧ୍ୟମ। ପ୍ରତ୍ୟେକ ମନ୍ତ୍ରଣାଳୟଙ୍କୁ ଉତ୍ତର ଦେବାକୁ ପଡ଼େ।",
   "results.stillToCheck.label": "ଏବେ ବି ଯାଞ୍ଚ କରିବାକୁ ବାକି",
+  "apply.mode.online": "ଅନଲାଇନରେ",
+  "apply.mode.offline": "ନିଜେ ଯାଇ",
+  "apply.mode.both": "ଅନଲାଇନରେ କିମ୍ବା ନିଜେ ଯାଇ",
 };

@@ -153,6 +153,56 @@ def _looks_like(text: str, words: tuple[str, ...]) -> bool:
 
 _BULLET = re.compile(r"^\s*(?:[-*•]|\d+[.)])\s+(.*)$")
 
+#: myScheme's machine translation puts spaces inside the bold markers, so the
+#: `**Step 1:**` that comes back from Hindi is `* * चरण 1: * *`. The markers are
+#: still there; they have just stopped parsing as bold, and they reached the
+#: page as literal asterisks in the middle of the instructions.
+#: Spaces WITHIN a line, never a newline: `\s` here would match the blank line
+#: between `**Offline**` and the first step and weld the heading's closing
+#: marker to the step's opening one, which is how the heading survived the
+#: filter below as the literal item "Offline*".
+_MANGLED_BOLD = re.compile(r"\*[ \t]+\*")
+
+#: A step label, in any language the corpus carries: one or two words and a
+#: small number, then a colon. "Step 4:", "चरण 2:", "படி 3:".
+#:
+#: Two things depend on finding these. The translated text often arrives with
+#: every step on ONE line — Hindi has three newlines where English has seven —
+#: so the label is the only boundary between one instruction and the next. And
+#: the label itself is redundant once found, because the renderer numbers the
+#: list: printing it gives "1. Step 1: ..." and, where the source repeats a
+#: number (this corpus has schemes with two "Step 1"s), a list that contradicts
+#: its own numbering.
+#:
+#: The number is written in Latin digits in every language here, which is what
+#: makes one pattern enough. `[^\W\d_]` is "a letter in any script".
+_STEP_LABEL = re.compile(
+    r"\*{0,2}\s*"
+    r"[^\W\d_]{2,15}(?:\s+[^\W\d_]{2,15})?"
+    r"\s*\d{1,2}\s*[:.]"
+    r"\s*\*{0,2}\s*",
+    re.UNICODE,
+)
+
+#: A line that is nothing but a short bold run — `**Offline**`. It is the
+#: application MODE, not a step, and `detect_mode` already reads it from the
+#: raw markdown, so numbering it as step 1 both miscounts the steps and leaves
+#: the word untranslated on a translated page.
+_MODE_HEADING = re.compile(r"^\*\*\s*([^*]{1,30}?)\s*\*\*$")
+
+
+def _split_on_labels(line: str) -> list[str]:
+    """One line into one chunk per step label found inside it."""
+    cuts = [m.start() for m in _STEP_LABEL.finditer(line) if m.start() > 0]
+    if not cuts:
+        return [line]
+    chunks, previous = [], 0
+    for cut in cuts:
+        chunks.append(line[previous:cut])
+        previous = cut
+    chunks.append(line[previous:])
+    return chunks
+
 
 def parse_list(markdown: Optional[str], limit: int = 24) -> list[str]:
     """Pull the list items out of a markdown block.
@@ -161,40 +211,88 @@ def parse_list(markdown: Optional[str], limit: int = 24) -> list[str]:
     renderer counts, the text does not — so the marker is stripped rather than
     trusted, and prose paragraphs are kept as their own items so a scheme that
     wrote its documents as a sentence is not silently reduced to nothing.
+
+    The same principle now covers the "Step 1:" labels written into the prose,
+    for the same reason and one more: in the translated text they are often the
+    only thing separating one instruction from the next.
     """
     if not markdown or not markdown.strip():
         return []
 
+    markdown = _MANGLED_BOLD.sub("**", markdown)
+
+    # A single mode heading at the top is this document's mode and belongs to
+    # `detect_mode`. TWO of them — an Online section and an Offline one — are
+    # separators between two different procedures, and dropping those would
+    # silently merge two sets of instructions into one list.
+    lines = [raw.strip() for raw in markdown.splitlines()]
+    headings = [i for i, line in enumerate(lines) if _MODE_HEADING.match(line)]
+    drop = set(headings[:1]) if len(headings) == 1 else set()
+
     items: list[str] = []
-    for raw in markdown.splitlines():
-        line = raw.strip()
-        if not line:
+    for index, line in enumerate(lines):
+        if not line or index in drop:
             continue
-        matched = _BULLET.match(line)
-        text = matched.group(1) if matched else line
-        text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)          # bold
-        text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)   # links
-        text = re.sub(r"^#{1,6}\s*", "", text).strip()
-        # myScheme's prose is converted from rich text and carries HTML through
-        # with it. Two things reached the screen because of that: a bare <br>
-        # rendered as its own numbered step, and "click on &#39;New&#39; button"
-        # shown verbatim to someone being told how to apply. Tags go first so a
-        # stripped <br> leaves an empty line that the length check drops;
-        # entities are unescaped after, so a literal &amp;#39; in the source
-        # cannot be decoded twice into a quote that was never there.
-        text = re.sub(r"<[^>]{1,40}>", " ", text)
-        text = html.unescape(text)
-        text = re.sub(r"\s{2,}", " ", text).strip()
-        if len(text) > 2:
-            items.append(text)
+        for chunk in _split_on_labels(line):
+            text = chunk.strip()
+            if not text:
+                continue
+            matched = _BULLET.match(text)
+            text = matched.group(1) if matched else text
+            # The label, once it has done its job of marking the boundary.
+            label = _STEP_LABEL.match(text)
+            if label and label.end() < len(text):
+                text = text[label.end():]
+            text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)          # bold
+            # Links. The space in `]\s*(` is not cosmetic: the translated
+            # records carry `[संबंधित प्राधिकारी] (https://…)` with a space
+            # between the two halves, which is not a link any more — so the
+            # brackets survived onto the page around the only words in the
+            # sentence a person might click.
+            text = re.sub(r"\[([^\]]+)\]\s*\(([^)]+)\)", r"\1 (\2)", text)
+            text = re.sub(r"^#{1,6}\s*", "", text).strip()
+            # myScheme's prose is converted from rich text and carries HTML through
+            # with it. Two things reached the screen because of that: a bare <br>
+            # rendered as its own numbered step, and "click on &#39;New&#39; button"
+            # shown verbatim to someone being told how to apply. Tags go first so a
+            # stripped <br> leaves an empty line that the length check drops;
+            # entities are unescaped after, so a literal &amp;#39; in the source
+            # cannot be decoded twice into a quote that was never there.
+            text = re.sub(r"<[^>]{1,40}>", " ", text)
+            text = html.unescape(text)
+            text = re.sub(r"\s{2,}", " ", text).strip()
+            if len(text) > 2:
+                items.append(text)
+            if len(items) >= limit:
+                break
         if len(items) >= limit:
-            break
+            break               # the inner break only leaves this line
     return items
 
 
 def detect_mode(application_md: Optional[str]) -> str:
-    """Online, offline, or both — it changes the entire instruction."""
-    text = (application_md or "").lower()
+    """Online, offline, or both — it changes the entire instruction.
+
+    myScheme states the mode in a heading of its own — `**Offline**` — and when
+    it does, that heading is the answer and the keyword sweep below is not
+    consulted. The sweep counts a URL anywhere in the text as evidence of an
+    online route, so an offline procedure that merely LINKS to the form to
+    print reads as "both", and the person is told they can apply online when
+    the same document says they must go to the office.
+
+    The heading stays in English in the translated records, which is why
+    matching it in English is enough.
+    """
+    raw = application_md or ""
+    headings = [m.group(1).strip().lower()
+                for m in (_MODE_HEADING.match(line.strip())
+                          for line in raw.splitlines())
+                if m]
+    stated = {h for h in headings if h in ("online", "offline")}
+    if stated:
+        return "both" if len(stated) > 1 else stated.pop()
+
+    text = raw.lower()
     online = "online" in text or "portal" in text or "http" in text
     offline = "offline" in text or "in person" in text or "branch" in text \
         or "office" in text or "csc" in text

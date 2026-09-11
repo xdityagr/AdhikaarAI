@@ -459,4 +459,7 @@ export const hi: Strings = {
   "track.official.dbt.body": "कौन-सी योजनाएँ सीधे खातों में भुगतान करती हैं, और उनके स्थिति पृष्ठ।",
   "track.official.cpgrams.body": "आधिकारिक शिकायत माध्यम। हर मंत्रालय को उत्तर देना ही होता है।",
   "results.stillToCheck.label": "अभी जाँचना बाकी",
+  "apply.mode.online": "ऑनलाइन",
+  "apply.mode.offline": "ख़ुद जाकर",
+  "apply.mode.both": "ऑनलाइन या ख़ुद जाकर",
 };

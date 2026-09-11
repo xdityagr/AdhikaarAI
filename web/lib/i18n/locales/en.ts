@@ -390,6 +390,13 @@ export const en = {
   "apply.yourDetails.hint": "Filled from what you told us. The dotted lines are for you to complete by hand.",
   "apply.documents": "Documents to carry",
   "apply.steps": "How to apply",
+  // The scheme states this in a heading of its own — "**Offline**" — which used
+  // to be printed as step 1, so the steps were miscounted and the one word that
+  // decides whether you can do this from home stayed in English on a translated
+  // page. It is a property of the procedure, not a step in it.
+  "apply.mode.online": "Online",
+  "apply.mode.offline": "In person",
+  "apply.mode.both": "Online or in person",
   "apply.official": "Official scheme page",
   "apply.notSubmitted": "This form has not been sent anywhere. Take it to the office or type it into the official portal yourself.",
   "apply.open": "Open the filled form",

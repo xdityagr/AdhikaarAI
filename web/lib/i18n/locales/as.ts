@@ -459,4 +459,7 @@ export const as: Strings = {
   "track.official.dbt.body": "কোনবোৰ আঁচনিয়ে পোনপটীয়াকৈ একাউণ্টত ধন দিয়ে, আৰু সেইবোৰৰ অৱস্থাৰ পৃষ্ঠা।",
   "track.official.cpgrams.body": "চৰকাৰী অভিযোগৰ মাধ্যম। প্ৰতিটো মন্ত্ৰালয়ে উত্তৰ দিবই লাগিব।",
   "results.stillToCheck.label": "এতিয়াও পৰীক্ষা কৰিবলৈ বাকী",
+  "apply.mode.online": "অনলাইনত",
+  "apply.mode.offline": "নিজে গৈ",
+  "apply.mode.both": "অনলাইনত বা নিজে গৈ",
 };

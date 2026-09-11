@@ -462,4 +462,7 @@ export const pa: Strings = {
   "track.official.dbt.body": "ਕਿਹੜੀਆਂ ਯੋਜਨਾਵਾਂ ਸਿੱਧੇ ਖਾਤੇ ਵਿੱਚ ਭੁਗਤਾਨ ਕਰਦੀਆਂ ਹਨ, ਅਤੇ ਉਨ੍ਹਾਂ ਦੇ ਸਥਿਤੀ ਪੰਨੇ।",
   "track.official.cpgrams.body": "ਸਰਕਾਰੀ ਸ਼ਿਕਾਇਤ ਮਾਧਿਅਮ। ਹਰ ਮੰਤਰਾਲੇ ਨੂੰ ਜਵਾਬ ਦੇਣਾ ਹੀ ਪੈਂਦਾ ਹੈ।",
   "results.stillToCheck.label": "ਅਜੇ ਜਾਂਚਣਾ ਬਾਕੀ",
+  "apply.mode.online": "ਆਨਲਾਈਨ",
+  "apply.mode.offline": "ਖ਼ੁਦ ਜਾ ਕੇ",
+  "apply.mode.both": "ਆਨਲਾਈਨ ਜਾਂ ਖ਼ੁਦ ਜਾ ਕੇ",
 };

@@ -459,4 +459,7 @@ export const te: Strings = {
   "track.official.dbt.body": "ఏ పథకాలు నేరుగా ఖాతాలకు చెల్లిస్తాయో, వాటి స్థితి పేజీలు.",
   "track.official.cpgrams.body": "అధికారిక ఫిర్యాదు మార్గం. ప్రతి మంత్రిత్వ శాఖా స్పందించి తీరాలి.",
   "results.stillToCheck.label": "ఇంకా తనిఖీ చేయాలి",
+  "apply.mode.online": "ఆన్‌లైన్‌లో",
+  "apply.mode.offline": "స్వయంగా వెళ్ళి",
+  "apply.mode.both": "ఆన్‌లైన్‌లో లేదా స్వయంగా వెళ్ళి",
 };
