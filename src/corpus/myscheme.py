@@ -293,6 +293,14 @@ _ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
     # dimension the PS names that myScheme publishes nowhere as a field. The
     # evidence column holds the sentence each figure came from, so any single
     # decision can be checked against the source by eye rather than trusted.
+    # The translated "how to apply" and "what to carry". Both are published by
+    # myScheme per language and neither was ever stored: `store_translation`
+    # wrote a literal None into application_md and there was no documents column
+    # at all, so a Hindi scheme page showed Hindi benefits and eligibility and
+    # then switched to English for the two things a person acts on.
+    "scheme_i18n": [
+        ("documents_md", "TEXT"),
+    ],
     "scheme_eligibility": [
         ("land_min_acres", "REAL"),
         ("land_max_acres", "REAL"),
@@ -799,6 +807,17 @@ def store_translation(conn: sqlite3.Connection, slug: str, lang: str,
     basic = block.get("basicDetails", {})
     content = block.get("schemeContent", {})
     eligibility = block.get("eligibilityCriteria", {})
+
+    # The translated application process, built exactly as the English one is in
+    # `crawl_details`. It used to be a literal None here, which is why a Hindi
+    # page listed its steps in English — the API had been returning `process_md`
+    # in Hindi the whole time and nothing read it.
+    processes = block.get("applicationProcess") or []
+    application_md = "\n\n".join(
+        f"**{p.get('mode', '')}**\n\n{p.get('process_md', '')}".strip()
+        for p in processes if isinstance(p, dict)
+    ) or None
+
     conn.execute(
         """INSERT INTO scheme_i18n (slug, lang, name, brief, benefits_md,
                                     eligibility_md, application_md, fetched_at)
@@ -807,13 +826,14 @@ def store_translation(conn: sqlite3.Connection, slug: str, lang: str,
              name=excluded.name, brief=excluded.brief,
              benefits_md=excluded.benefits_md,
              eligibility_md=excluded.eligibility_md,
+             application_md=excluded.application_md,
              fetched_at=excluded.fetched_at""",
         (
             slug, lang, basic.get("schemeName"),
             content.get("briefDescription"),
             _md(content, "benefits"),
             _md(eligibility, "eligibilityDescription"),
-            None, _now(),
+            application_md, _now(),
         ),
     )
     conn.commit()

@@ -214,8 +214,14 @@ def get_scheme(slug: str, lang: str = "en",
                 "SELECT * FROM scheme_i18n WHERE slug = ? AND lang = ?",
                 (slug, lang)).fetchone()
             if tr is not None:
-                for key in ("name", "brief", "benefits_md", "eligibility_md",
-                            "application_md"):
+                # `documents_md` is included and guarded: a corpus published
+                # before that column existed has no such key, and reading it
+                # would take down every non-English scheme page.
+                overlay = ["name", "brief", "benefits_md", "eligibility_md",
+                           "application_md"]
+                if "documents_md" in tr.keys():
+                    overlay.append("documents_md")
+                for key in overlay:
                     if tr[key]:
                         scheme[key] = tr[key]
                 scheme["language"] = lang
