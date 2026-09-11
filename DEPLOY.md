@@ -112,6 +112,17 @@ service's **environment variables** into build arguments by itself, so
 `CORPUS_TAG` and `CORPUS_REPO` are declared under `envVars` and reach the
 Dockerfile's `ARG` instructions from there.
 
+**Bumping the tag means bumping it in TWO places, and the dashboard wins.**
+Editing `CORPUS_TAG` in `render.yaml` changes nothing for a service that was
+created through the API rather than synced from the Blueprint — the value stored
+against the service is what Render passes as the build argument, and it silently
+overrides the Dockerfile's `ARG` default. The symptom is a deploy that goes green
+in thirty seconds carrying the new code and the old data, which looks like a
+success. Check `/health`: the catalogue's `size_mb` is the giveaway.
+
+Set it on the service too, then trigger a deploy with the cache cleared — an
+environment-variable change on its own does not start one.
+
 A consequence worth knowing: that translation applies to every variable,
 secrets included. They are only baked into the image if the Dockerfile
 *references* them with an `ARG`, and this one references exactly two — neither
