@@ -20,11 +20,22 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Opted-out numbers. In memory, which is honest for a demo and wrong for
-# production: a restart forgets that someone asked to be left alone, and that
-# is the one thing this file exists to remember. Moving it into the database is
-# the first thing to do before this handles real traffic.
+# Opted-out numbers, in memory AND in the database.
+#
+# The set is a read-through cache, not the record. It exists because
+# `has_opted_out` is consulted on every inbound message and on every candidate
+# of every alert run, and that must not be a query. The database is the truth:
+# it is loaded into here once at startup by `load()`, and every change is
+# written there BEFORE the cache is updated.
+#
+# That write order is the whole point. If the process dies between the two, the
+# durable record says opted-out and the cache is rebuilt from it on the next
+# start — the failure leans towards messaging someone less, never more.
 _OPTED_OUT: set[str] = set()
+
+#: True once `load()` has run. Kept so a caller can tell "nobody has opted out"
+#: from "we have not looked yet", which are very different things to act on.
+_loaded = False
 
 # Written in each script rather than transliterated, because someone who wants
 # this to stop should not have to type in English to make it happen.
@@ -112,32 +123,81 @@ def is_start(text: str) -> bool:
     return _normalise(text) in {word.casefold() for word in START_WORDS}
 
 
+async def load() -> None:
+    """Fill the cache from the database. Called once, at startup.
+
+    Failure is loud but not fatal: an empty cache is the SAFE direction for
+    inbound replies — we answer someone we should have ignored — but it is the
+    DANGEROUS direction for outbound, so `is_loaded()` exists and the alert job
+    must refuse to run when it is False.
+    """
+    global _loaded
+    try:
+        from src.database import get_connection, load_opted_out
+        db = await get_connection()
+        try:
+            _OPTED_OUT.update(await load_opted_out(db))
+        finally:
+            await db.close()
+        _loaded = True
+        logger.info("Consent loaded: %d opted out", len(_OPTED_OUT))
+    except Exception:
+        logger.exception("Could not load the opt-out list")
+
+
+def is_loaded() -> bool:
+    """Whether the opt-out list has actually been read from the database.
+
+    Nothing may send an unsolicited message while this is False. An empty set
+    here means "we have not looked", and acting on it would message every
+    person who ever asked us to stop.
+    """
+    return _loaded
+
+
+async def _remember(user_id: str, opted_out: bool) -> None:
+    """Write the decision down, then update the cache. Order matters."""
+    try:
+        from src.database import get_connection, set_consent
+        db = await get_connection()
+        try:
+            await set_consent(db, user_id, opted_out)
+        finally:
+            await db.close()
+    except Exception:
+        # The cache is still updated below. Honouring STOP for the life of this
+        # process is strictly better than dropping it because a disk was busy.
+        logger.exception("Could not persist consent for %s", user_id[:10] + "…")
+
+
 def has_opted_out(user_id: str) -> bool:
     return user_id in _OPTED_OUT
 
 
-def opt_out(user_id: str) -> None:
+async def opt_out(user_id: str) -> None:
+    await _remember(user_id, True)
     _OPTED_OUT.add(user_id)
     logger.info("Opted out: %s", user_id[:10] + "…")
 
 
-def opt_in(user_id: str) -> None:
+async def opt_in(user_id: str) -> None:
+    await _remember(user_id, False)
     _OPTED_OUT.discard(user_id)
 
 
-def check(user_id: str, text: str) -> str | None:
+async def check(user_id: str, text: str) -> str | None:
     """The reply consent requires, or None to let the message through.
 
     Order matters: STOP is honoured before anything else, including before an
     opted-out check, so that sending it twice is harmless rather than ignored.
     """
     if is_stop(text):
-        opt_out(user_id)
+        await opt_out(user_id)
         return STOPPED
 
     if has_opted_out(user_id):
         if is_start(text):
-            opt_in(user_id)
+            await opt_in(user_id)
             return RESUMED
         # Silence, deliberately. Someone who asked not to be messaged should
         # not get a reply explaining that they will not get replies.
