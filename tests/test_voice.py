@@ -518,3 +518,164 @@ class TestCallLifecycle:
         assert body["secret_configured"] is True
         assert SECRET not in json.dumps(body)
         assert body["recording"] == "none"
+
+
+# ---------------------------------------------------------------------------
+# Provisioning — the part that decides what language the phone line speaks
+# ---------------------------------------------------------------------------
+
+class TestProvisioning:
+    """`scripts/provision_voice.py` encodes what the spike measured.
+
+    These are not tests of Vapi. They are tests that we cannot accidentally
+    stand up a phone line that answers in English to a Tamil speaker, which is
+    the specific failure the whole phase exists to avoid — a scheme finder that
+    only answers in English is the problem this product was built to solve.
+    """
+
+    def test_a_language_we_cannot_speak_is_refused(self):
+        from scripts import provision_voice as provision
+        # Malayalam: Sarvam has it, Vapi's Deepgram does not.
+        assert provision.run("ml", "https://example.onrender.com",
+                             attach=False, dry_run=True) == 1
+
+    def test_a_language_we_can_hear_but_not_speak_is_refused(self):
+        """Bengali transcribes on nova-3 and has no Flash v2.5 voice. Half a
+        channel is not a channel — the caller would be understood and then
+        answered in English."""
+        from scripts import provision_voice as provision
+        assert provision.run("bn", "https://example.onrender.com",
+                             attach=False, dry_run=True) == 1
+
+    def test_hindi_and_tamil_are_the_two_that_clear(self):
+        from scripts import provision_voice as provision
+        for language in ("hi", "ta"):
+            assert language in provision.VAPI_DEEPGRAM_STT
+            assert language in provision.VAPI_ELEVENLABS_TTS
+
+    def test_an_unreachable_base_url_is_refused(self):
+        from scripts import provision_voice as provision
+        assert provision.run("hi", "http://localhost:8000",
+                             attach=False, dry_run=True) == 1
+
+    def test_every_offerable_language_has_a_greeting_in_it(self):
+        """A greeting that falls back to English is how an 'multilingual' line
+        turns out to open in English every time."""
+        from scripts import provision_voice as provision
+        for language in provision.VAPI_ELEVENLABS_TTS:
+            assert language in provision._GREETING, language
+
+    def test_the_form_filler_is_not_registered_as_a_tool(self):
+        """Left out of the assistant entirely, so the model cannot reach for it
+        even if it wants to."""
+        from scripts import provision_voice as provision
+        assert "prepare_application" not in provision._TOOL_ORDER
+
+    def test_every_registered_tool_is_one_the_endpoint_will_serve(self):
+        from scripts import provision_voice as provision
+        for name in provision._TOOL_ORDER:
+            assert name in voice.ALLOWED, name
+
+    def test_recording_is_off_in_the_payload_too(self):
+        """Stated, not defaulted — 'we never turned it on' and 'we turned it
+        off' are different claims and only one survives a changed default."""
+        from scripts import provision_voice as provision
+        payload = provision.build("hi", "https://example.onrender.com", "s3cret")
+        assert payload["artifactPlan"]["recordingEnabled"] is False
+
+    def test_the_secret_reaches_every_tool(self):
+        """One unsigned tool is an open endpoint; a missing secret is a 403 the
+        dashboard reports only as 'assistant did not respond'."""
+        from scripts import provision_voice as provision
+        payload = provision.build("hi", "https://example.onrender.com", "s3cret")
+        tools = payload["model"]["tools"]
+        assert tools
+        for tool in tools:
+            assert tool["server"]["secret"] == "s3cret"
+            assert tool["server"]["url"].startswith("https://")
+
+    def test_tool_descriptions_are_the_web_s_own(self):
+        """Two copies would drift, and then the phone and the website would
+        reach for different tools on the same sentence."""
+        from scripts import provision_voice as provision
+        from src.agent import TOOL_SCHEMAS
+        published = {s["name"]: s["description"] for s in TOOL_SCHEMAS}
+        payload = provision.build("hi", "https://example.onrender.com", "s3cret")
+        for tool in payload["model"]["tools"]:
+            name = tool["function"]["name"]
+            if name in published:
+                assert tool["function"]["description"] == published[name], name
+
+
+# ---------------------------------------------------------------------------
+# The published FAQs — quoted, never composed
+# ---------------------------------------------------------------------------
+
+class TestPublishedFaqs:
+    """52,394 government-written pairs, and the discipline that makes them safe.
+
+    The corpus holds the ANSWERS in English only. myScheme's API does return a
+    per-language FAQ block, but measured over 382 sampled pairs it translates
+    100% of the questions and 0% of the answers — so this must never pretend a
+    quoted English answer is a translated one.
+    """
+
+    def test_it_quotes_the_scheme_s_own_answer(self):
+        say, detail = voice.answer_faq("sui", "what is the interest rate", "en")
+        assert detail["matched"] is True
+        assert detail["quoted"] is True
+        # The spoken line IS the published answer, not a paraphrase of it.
+        assert say == detail["answer"]
+
+    def test_a_question_the_corpus_does_not_cover_gets_no_answer(self):
+        """'We do not know, and here is who does' is a true sentence. A
+        confidently-read near-miss is not, and the listener cannot see which
+        question it actually answers."""
+        say, detail = voice.answer_faq("sui", "zzzz qqqq", "en")
+        assert detail["matched"] is False
+        assert detail["suggest"] == "find_offices"
+        assert "do not cover" in say
+
+    def test_a_non_english_caller_is_told_it_is_a_translation(self):
+        _say, detail = voice.answer_faq("sui", "what is the interest rate", "hi")
+        assert detail["translate_aloud"] is True
+        assert detail["say_it_is_a_translation"] is True
+        assert detail["source_language"] == "en"
+
+    def test_an_english_caller_is_not(self):
+        _say, detail = voice.answer_faq("sui", "what is the interest rate", "en")
+        assert detail["translate_aloud"] is False
+
+    def test_an_unknown_scheme_does_not_invent_one(self):
+        say, detail = voice.answer_faq("no-such-scheme", "anything", "en")
+        assert detail["found"] is False
+        assert "do not have" in say
+
+    def test_the_caller_s_language_comes_from_what_we_already_know(self, client):
+        """A returning WhatsApp user does not have to say which language they
+        are speaking for the quote to be flagged as a translation."""
+        number = "919000000601"
+        brain._CONTEXT[number]["language"] = "ta"
+
+        body = envelope("answer_faq",
+                        {"slug": "sui", "question": "what is the interest rate"},
+                        number=f"+{number}")
+        response = client.post("/api/voice/tools/answer_faq",
+                               content=body, headers=signed(body))
+        assert response.status_code == 200
+        assert result_of(response)["detail"]["say_it_is_a_translation"] is True
+
+    def test_faqs_are_english_only_in_the_corpus(self):
+        """The fact the whole approach rests on. If a `faqs` column ever appears
+        on `scheme_i18n`, this test should fail and the read-time translation
+        should be reconsidered — government text beats ours."""
+        from src.discovery import open_corpus
+        connection = open_corpus()
+        if connection is None:
+            pytest.skip("corpus not built")
+        try:
+            columns = {row[1] for row in
+                       connection.execute("PRAGMA table_info(scheme_i18n)")}
+        finally:
+            connection.close()
+        assert "faqs" not in columns

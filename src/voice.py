@@ -323,7 +323,7 @@ TIER_1 = ("find_schemes", "check_scheme_eligibility", "find_offices")
 TIER_2 = ("lookup_scheme", "search_schemes", "price_loan", "corpus_stats")
 
 #: Built here rather than wrapped, because they have no web equivalent.
-NATIVE = ("next_question", "answer_question")
+NATIVE = ("next_question", "answer_question", "answer_faq")
 
 #: Named so the refusal is explicit and testable rather than an absence someone
 #: later reads as an oversight and "fixes".
@@ -556,6 +556,113 @@ def answer_question(number: str, question_id: str, answer: str) -> tuple[str, di
 
 
 # ---------------------------------------------------------------------------
+# The published FAQs
+#
+# 52,394 question-and-answer pairs across 4,721 of 4,736 schemes, written by the
+# government and phrased as questions people actually ask. For a voice channel
+# it is the best-shaped content in the corpus — it is already a spoken answer to
+# a spoken question.
+#
+# QUOTED, NEVER SYNTHESISED. This returns the scheme's own published sentence or
+# it returns nothing. A model may read it out and may translate it; it may not
+# compose a new answer from it, and if the corpus has no answer the correct
+# reply is that we do not know and here is the office that will.
+#
+# They are English-only, and measured rather than assumed: myScheme's API does
+# return a per-language FAQ block, but across 382 sampled pairs 100% of the
+# QUESTIONS were translated and 0% of the ANSWERS were. So backfilling it the
+# way the other fields are backfilled would produce a column that looks
+# translated and is not — which on a call means a Hindi voice reading an English
+# sentence, with no screen to fall back on. See docs/SPIKE-voice-vapi.md.
+#
+# Until the per-language questions are backfilled, matching is over the English
+# ones, and the answer is flagged for the speaking model to translate aloud and
+# to say that it is translating.
+# ---------------------------------------------------------------------------
+
+_STOPWORDS = frozenset({
+    "what", "is", "the", "a", "an", "of", "for", "to", "in", "on", "and", "or",
+    "how", "do", "does", "can", "i", "my", "me", "are", "be", "this", "that",
+    "under", "it", "if", "there", "any", "will", "with", "get", "am",
+})
+
+
+def _words(text: str) -> set[str]:
+    cleaned = "".join(c if c.isalnum() or c.isspace() else " " for c in (text or ""))
+    return {w for w in cleaned.lower().split() if w and w not in _STOPWORDS}
+
+
+def answer_faq(slug: str, question: str, language: str = "en") -> tuple[str, dict]:
+    """The scheme's own published answer to the nearest published question.
+
+    Ranked by word overlap rather than by a model. It is a set intersection over
+    a handful of strings, it costs nothing, and — the part that matters — it
+    cannot invent a question that was never asked or an answer that was never
+    published.
+
+    Returns no answer rather than a poor one. "We do not know, and here is who
+    does" is a true sentence; a confidently-read near-miss is not.
+    """
+    from src.discovery import open_corpus
+
+    connection = open_corpus()
+    if connection is None:
+        return ("I cannot reach the scheme records just now.", {"available": False})
+
+    try:
+        row = connection.execute(
+            "SELECT name, faqs FROM schemes WHERE slug = ?", (slug,)).fetchone()
+    finally:
+        connection.close()
+
+    if row is None:
+        return ("I do not have that scheme.", {"found": False, "slug": slug})
+
+    try:
+        pairs = json.loads(row["faqs"] or "[]")
+    except (json.JSONDecodeError, TypeError):
+        pairs = []
+    pairs = [p for p in pairs if isinstance(p, dict) and p.get("answer")]
+
+    if not pairs:
+        return ("That scheme has no published questions and answers.",
+                {"found": True, "slug": slug, "pairs": 0})
+
+    asked = _words(question)
+    best, score = None, 0
+    for pair in pairs:
+        overlap = len(asked & _words(pair.get("question") or ""))
+        if overlap > score:
+            best, score = pair, overlap
+
+    if best is None or score < 1:
+        # Deliberately not "here is the closest one we have". A near-miss read
+        # in a confident voice is indistinguishable, to the listener, from an
+        # answer — and they cannot see the question it actually answers.
+        return ("The scheme's published questions do not cover that. "
+                "I can tell you which office will know.",
+                {"found": True, "slug": slug, "matched": False,
+                 "pairs": len(pairs), "suggest": "find_offices"})
+
+    answer = (best.get("answer") or "").strip()
+    return (answer, {
+        "found": True,
+        "matched": True,
+        "slug": slug,
+        "scheme": (row["name"] or "").strip(),
+        "question": (best.get("question") or "").strip(),
+        "answer": answer,
+        "quoted": True,
+        "source_language": "en",
+        # The speaking model translates and says so. Acceptable here and only
+        # here: this is quoted content, not a decision about a person. An
+        # eligibility verdict is never translated — it is computed.
+        "translate_aloud": language not in ("en", "", None),
+        "say_it_is_a_translation": language not in ("en", "", None),
+    })
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
@@ -610,6 +717,16 @@ async def call_tool(name: str, request: Request) -> dict:
             return answer_question(number,
                                    str(arguments.get("question_id") or ""),
                                    str(arguments.get("answer") or ""))
+        if name == "answer_faq":
+            # The caller's own language, from whichever channel taught us —
+            # so a Hindi speaker is told the quote is a translation without the
+            # model having to work out which language it is speaking.
+            return answer_faq(
+                str(arguments.get("slug") or ""),
+                str(arguments.get("question") or ""),
+                str(arguments.get("language")
+                    or brain.language_if_known(number) or "en"),
+            )
 
         # Everything the caller already told us, folded under what they just
         # said — so `find_schemes` on a call knows their state without the model
