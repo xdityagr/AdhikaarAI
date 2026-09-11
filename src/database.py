@@ -129,6 +129,40 @@ DDL_STATEMENTS = [
         created_at TEXT NOT NULL
     )
     """,
+    # A citizen's case, handed to an operator by the citizen.
+    #
+    # The only route by which anything about a person reaches a server and
+    # stays there. No operator can create a row here; they redeem a code the
+    # citizen gave them, and the citizen can revoke it with nothing but that
+    # same code — asking somebody to authenticate in order to WITHDRAW consent
+    # would be a worse bargain than the one they agreed to.
+    #
+    # `scope` records what was agreed rather than assuming it, so widening what
+    # the panel does later cannot silently re-interpret consent already given.
+    """
+    CREATE TABLE IF NOT EXISTS cases (
+        case_id TEXT PRIMARY KEY,
+        code TEXT NOT NULL UNIQUE,
+        -- What the citizen chose to share. Their answers, not their documents.
+        context TEXT NOT NULL,
+        scheme_slug TEXT,
+        -- An operator who speaks to them in the wrong language has undone most
+        -- of the point of this product.
+        language TEXT NOT NULL DEFAULT 'en',
+        -- Their number, when they came through WhatsApp, so a revocation can
+        -- be honoured from the channel they already use. Null on the website.
+        citizen_ref TEXT,
+        scope TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        -- NULL until an operator takes it. The conditional UPDATE against this
+        -- column is what stops two counters filing the same application.
+        claimed_by TEXT,
+        claimed_org TEXT,
+        claimed_at TEXT,
+        closed_at TEXT,
+        revoked_at TEXT
+    )
+    """,
     """
     CREATE TABLE IF NOT EXISTS operator_sessions (
         -- The SHA-256 of the cookie's token, never the token. A leaked table
@@ -675,3 +709,99 @@ async def sweep_sessions(db, now_iso: str) -> int:
         "DELETE FROM operator_sessions WHERE expires_at <= ?", (now_iso,))
     await db.commit()
     return cursor.rowcount or 0
+
+
+# ---------------------------------------------------------------------------
+# Cases — a citizen's delegation to an operator
+#
+# Every write here is conditional on the state it expects to find, and returns
+# how many rows it changed. Read-then-write would let two operators at two
+# counters both take one case, and two people filing the same application is a
+# rejected application.
+# ---------------------------------------------------------------------------
+
+CASE_COLUMNS = ("case_id, code, context, scheme_slug, language, citizen_ref, "
+                "scope, created_at, claimed_by, claimed_org, claimed_at, "
+                "closed_at, revoked_at")
+
+
+async def put_case(db, case_id: str, code: str, context: str,
+                   scheme_slug: Optional[str], language: str,
+                   citizen_ref: Optional[str], scope: str,
+                   created_at: str) -> None:
+    await db.execute(
+        """INSERT INTO cases
+               (case_id, code, context, scheme_slug, language, citizen_ref,
+                scope, created_at)
+           VALUES (?,?,?,?,?,?,?,?)""",
+        (case_id, code, context, scheme_slug, language, citizen_ref,
+         scope, created_at),
+    )
+    await db.commit()
+
+
+async def get_case(db, code: str) -> Optional[tuple]:
+    cursor = await db.execute(
+        f"SELECT {CASE_COLUMNS} FROM cases WHERE code = ?", (code,))
+    return await cursor.fetchone()
+
+
+async def get_case_by_id(db, case_id: str) -> Optional[tuple]:
+    cursor = await db.execute(
+        f"SELECT {CASE_COLUMNS} FROM cases WHERE case_id = ?", (case_id,))
+    return await cursor.fetchone()
+
+
+async def claim_case(db, code: str, operator_id: str, organisation_id: str,
+                     when: str) -> int:
+    """Bind a free case to one operator. Returns rows changed — 0 means
+    somebody else got there first, which is the race this exists to lose
+    safely."""
+    cursor = await db.execute(
+        """UPDATE cases
+           SET claimed_by = ?, claimed_org = ?, claimed_at = ?
+           WHERE code = ? AND claimed_by IS NULL
+                 AND revoked_at IS NULL AND closed_at IS NULL""",
+        (operator_id, organisation_id, when, code),
+    )
+    await db.commit()
+    return cursor.rowcount or 0
+
+
+async def revoke_case(db, code: str, when: str) -> int:
+    """The citizen withdraws consent. Works whether or not it was claimed, and
+    does not require knowing who holds it."""
+    cursor = await db.execute(
+        """UPDATE cases SET revoked_at = ?
+           WHERE code = ? AND revoked_at IS NULL AND closed_at IS NULL""",
+        (when, code),
+    )
+    await db.commit()
+    return cursor.rowcount or 0
+
+
+async def close_case(db, case_id: str, operator_id: str, when: str) -> int:
+    """Filed. Only the operator holding it may close it, and a revoked case
+    cannot be closed — it already ended, on the citizen's terms."""
+    cursor = await db.execute(
+        """UPDATE cases SET closed_at = ?
+           WHERE case_id = ? AND claimed_by = ?
+                 AND closed_at IS NULL AND revoked_at IS NULL""",
+        (when, case_id, operator_id),
+    )
+    await db.commit()
+    return cursor.rowcount or 0
+
+
+async def operator_cases(db, operator_id: str,
+                         include_closed: bool = False) -> list[tuple]:
+    """This operator's caseload. A revoked case never appears again: the
+    citizen ended it, and "closed" is not the same answer as "taken back"."""
+    clause = "" if include_closed else " AND closed_at IS NULL"
+    cursor = await db.execute(
+        f"""SELECT {CASE_COLUMNS} FROM cases
+            WHERE claimed_by = ? AND revoked_at IS NULL{clause}
+            ORDER BY claimed_at DESC""",
+        (operator_id,),
+    )
+    return list(await cursor.fetchall())

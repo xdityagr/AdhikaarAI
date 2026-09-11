@@ -32,11 +32,11 @@ from typing import Annotated, Optional
 from fastapi import APIRouter, Cookie, Depends, HTTPException, Response, status
 from pydantic import BaseModel, Field, StringConstraints
 
-from src import auth
+from src import auth, delegation
 from src.config import get_settings
 from src.database import (
     close_all_sessions, close_session, create_operator, create_organisation,
-    find_operator_by_email, get_connection, open_session,
+    find_operator_by_email, get_case_by_id, get_connection, open_session,
     record_login_failure, record_login_success, session_operator,
 )
 
@@ -334,3 +334,140 @@ async def operator_health(
     """Cheap authenticated ping, so the panel can tell "signed out" from "the
     engine is down" without interpreting a 401 from a data route."""
     return {"ok": True, "at": datetime.now(timezone.utc).isoformat()}
+
+
+# ---------------------------------------------------------------------------
+# Cases — the citizen's delegation, from the operator's side
+# ---------------------------------------------------------------------------
+
+class ClaimRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=40)
+
+
+class CaseOut(BaseModel):
+    case_id: str
+    code: str
+    scheme_slug: Optional[str]
+    language: str
+    created_at: str
+    claimed_at: Optional[str]
+    closed_at: Optional[str]
+    #: What the citizen chose to share. Returned only to the operator holding
+    #: the case — never in a list, and never to a colleague.
+    context: Optional[dict] = None
+
+
+def _case_out(case: delegation.Case, with_context: bool = False) -> CaseOut:
+    return CaseOut(
+        case_id=case.case_id, code=case.code, scheme_slug=case.scheme_slug,
+        language=case.language, created_at=case.created_at,
+        claimed_at=case.claimed_at, closed_at=case.closed_at,
+        context=case.context if with_context else None,
+    )
+
+
+#: Why a code was refused, in words an operator can act on. The refusal itself
+#: is an enum so this mapping is total; a new refusal without a sentence here
+#: is a KeyError at development time rather than a blank message at a counter.
+_REFUSAL_TEXT = {
+    delegation.Refusal.UNKNOWN:
+        "No case with that code. Check the letters and try again.",
+    delegation.Refusal.EXPIRED:
+        "That code has expired. Ask them to create a new one.",
+    delegation.Refusal.ALREADY_CLAIMED:
+        "Another operator is already helping with this case.",
+    delegation.Refusal.REVOKED:
+        "The citizen has withdrawn this case.",
+    delegation.Refusal.CLOSED:
+        "This case has already been filed.",
+}
+
+
+@router.post("/operator/cases/claim", response_model=CaseOut)
+async def claim_case_route(
+    request: ClaimRequest,
+    operator: auth.Operator = Depends(current_operator),
+) -> CaseOut:
+    """Take a case the citizen offered, by its code.
+
+    An operator cannot create a case — there is no route that does, and that
+    absence is the design. Everything the panel knows about a person is here
+    because the person handed it over.
+
+    Failure is loud, unlike the web-to-WhatsApp handoff it shares an alphabet
+    with: "already claimed", "revoked" and "mistyped" lead to three different
+    next actions for somebody with a person in front of them.
+    """
+    try:
+        case = await delegation.claim(request.code, operator.operator_id,
+                                      operator.organisation_id)
+    except delegation.DelegationError as refused:
+        status_code = (status.HTTP_409_CONFLICT
+                       if refused.refusal in (delegation.Refusal.ALREADY_CLAIMED,
+                                              delegation.Refusal.CLOSED)
+                       else status.HTTP_404_NOT_FOUND)
+        raise HTTPException(status_code, _REFUSAL_TEXT[refused.refusal])
+    return _case_out(case, with_context=True)
+
+
+@router.get("/operator/cases", response_model=list[CaseOut])
+async def list_cases(
+    include_closed: bool = False,
+    operator: auth.Operator = Depends(current_operator),
+) -> list[CaseOut]:
+    """This operator's caseload, without the citizens' answers.
+
+    The list is for choosing which case to open. Returning everyone's income
+    and community in it would put a screenful of households in front of anybody
+    who glances at a shared counter monitor.
+    """
+    cases = await delegation.caseload(operator.operator_id, include_closed)
+    return [_case_out(c) for c in cases]
+
+
+@router.get("/operator/cases/{case_id}", response_model=CaseOut)
+async def read_case(
+    case_id: str,
+    operator: auth.Operator = Depends(current_operator),
+) -> CaseOut:
+    """One case in full, and only if this operator holds it.
+
+    Checked against `claimed_by` rather than against the organisation: consent
+    was given to a person at a counter, not to their employer.
+    """
+    db = await get_connection()
+    try:
+        row = await get_case_by_id(db, case_id)
+    finally:
+        await db.close()
+
+    if row is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No such case")
+    case = delegation._to_case(row)
+    # 404 rather than 403 for a case somebody else holds: a 403 would confirm
+    # the case exists to anybody who can guess an id.
+    if case.claimed_by != operator.operator_id:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "No such case")
+    if case.revoked_at:
+        raise HTTPException(status.HTTP_410_GONE,
+                            "The citizen has withdrawn this case.")
+    return _case_out(case, with_context=True)
+
+
+@router.post("/operator/cases/{case_id}/close", response_model=CaseOut)
+async def close_case_route(
+    case_id: str,
+    operator: auth.Operator = Depends(current_operator),
+) -> CaseOut:
+    """Filed. The consent ends with the case — an operator who finished the job
+    three months ago should not still be able to read a household's income."""
+    closed = await delegation.close(case_id, operator.operator_id)
+    if not closed:
+        raise HTTPException(status.HTTP_404_NOT_FOUND,
+                            "No open case of yours with that id")
+    db = await get_connection()
+    try:
+        row = await get_case_by_id(db, case_id)
+    finally:
+        await db.close()
+    return _case_out(delegation._to_case(row))

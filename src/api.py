@@ -39,6 +39,7 @@ from src.catalog import (catalog_meta, get_scheme, search_schemes,
 from src.paths import MEDIA_DIR, TILE_DIR
 from src.config import SCHEMES, get_settings
 from src.corpus import load_corpus
+from src import delegation
 from src.discovery import Facets, discover_with_credit, evaluate_scheme
 from src.geo import lookup_pin, reverse_geocode
 from src.literacy import (
@@ -906,3 +907,57 @@ async def read_aadhaar_qr(request: AadhaarQrRequest) -> dict:
         # returned to them, stored nowhere.
         "card": scanned.raw_fields,
     }
+
+
+# ---------------------------------------------------------------------------
+# Handing a case to an operator, and taking it back
+#
+# These two are on the CITIZEN's router and are deliberately unauthenticated,
+# because the citizen has no account and will not be given one. Holding the
+# code is the evidence, and it is the same evidence for granting as for
+# withdrawing — asking somebody to authenticate in order to withdraw consent
+# they already gave would be a worse bargain than the one they agreed to.
+# ---------------------------------------------------------------------------
+
+class OfferCaseRequest(BaseModel):
+    """What the citizen chooses to share, and nothing more.
+
+    The answers travel from their own device; the server did not have them
+    before this call and would not have them without it.
+    """
+    context: dict = Field(default_factory=dict)
+    scheme_slug: Optional[str] = None
+    language: str = "en"
+
+
+@router.post("/cases/offer")
+async def offer_case(request: OfferCaseRequest) -> dict:
+    """Mint a code an operator can redeem to help with this application.
+
+    This is the only way anything about a person is stored on a server, and it
+    happens because they pressed a button that said so.
+    """
+    case = await delegation.offer(context=request.context,
+                                  scheme_slug=request.scheme_slug,
+                                  language=request.language)
+    return {
+        "code": case.code,
+        "case_id": case.case_id,
+        "expires_in_hours": delegation.CLAIM_HOURS,
+    }
+
+
+class RevokeCaseRequest(BaseModel):
+    code: str = Field(min_length=1, max_length=40)
+
+
+@router.post("/cases/revoke")
+async def revoke_case_route(request: RevokeCaseRequest) -> dict:
+    """Take it back. Works whether or not an operator has claimed it.
+
+    Returns the same answer either way. Reporting "no such case" would tell
+    whoever typed a code whether it exists, and a revocation route that
+    enumerates cases is a worse hole than the one it closes.
+    """
+    await delegation.revoke(request.code)
+    return {"ok": True}
