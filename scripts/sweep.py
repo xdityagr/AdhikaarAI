@@ -1,77 +1,104 @@
-"""Run old and new parse_list over the whole corpus and compare."""
-import importlib.util
+"""Does the step parser survive this language?
+
+`src/application.py` splits a scheme's "how to apply" into steps, and it was
+written against the shape Hindi comes back in. Another language can arrive
+punctuated differently, and the two ways that shows up are both measurable:
+
+  collapsed   the whole section parsed as one or two blobs, so the page shows a
+              wall of text where English shows a numbered list
+  disagrees   a different number of steps than the English of the same scheme,
+              which means one of the two is wrong
+
+Hindi went from 4273 collapsed to 1689, and from agreeing with English on 10%
+of schemes to 29%, when `_STEP_LABEL` was widened to fit it. Run this after
+backfilling a language and compare.
+
+    python scripts/sweep.py ur              # one language
+    python scripts/sweep.py hi ur mr        # several
+    python scripts/sweep.py                 # every language in the corpus
+
+If a language splits badly the likely cause is its word for "Step" not matching
+`_STEP_LABEL` in src/application.py. Widen it with a test — the place is
+tests/test_application_and_handoff.py::TestStepsSurviveTranslation, and
+`test_a_number_in_prose_is_not_mistaken_for_a_step` is the guard against
+over-splitting.
+"""
+from __future__ import annotations
+
+import argparse
 import sqlite3
 import sys
+from pathlib import Path
 
-sys.path.insert(0, r"C:\Users\Aditya\Projects\AdhikaarAI")
-from src.application import parse_list as new_parse                # noqa: E402
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
 
-spec = importlib.util.spec_from_file_location(
-    "old_application",
-    r"C:\Users\Aditya\AppData\Local\Temp\claude"
-    r"\C--Users-Aditya-Projects-AdhikaarAI"
-    r"\34a2f36b-7097-413e-9a44-047d1f6433a8\scratchpad\application_backup.py")
-old = importlib.util.module_from_spec(spec)
-sys.modules["old_application"] = old
-spec.loader.exec_module(old)
-old_parse = old.parse_list
+from src.application import parse_list                             # noqa: E402
+from src.paths import CATALOGUE_DB                                 # noqa: E402
 
-c = sqlite3.connect(r"C:\Users\Aditya\Projects\AdhikaarAI\data\schemes.db")
+LIMIT = 15
 
-rows = c.execute(
-    "SELECT slug, application_md FROM schemes "
-    "WHERE application_md IS NOT NULL AND application_md != ''").fetchall()
-print(f"English: {len(rows)} schemes with an apply section")
 
-lost, grew, same, bigjump = 0, 0, 0, []
-total_chars_old = total_chars_new = 0
-for slug, md in rows:
-    o, n = old_parse(md, 15), new_parse(md, 15)
-    total_chars_old += sum(len(x) for x in o)
-    total_chars_new += sum(len(x) for x in n)
-    if not n and o:
-        lost += 1
-        if len(bigjump) < 5:
-            bigjump.append(("LOST", slug, len(o), len(n)))
-    elif len(n) > len(o) + 4:
-        grew += 1
-        if len(bigjump) < 10:
-            bigjump.append(("GREW", slug, len(o), len(n)))
-    elif len(n) == len(o):
-        same += 1
+def languages(conn: sqlite3.Connection) -> list[str]:
+    return [row[0] for row in conn.execute(
+        "SELECT lang, COUNT(*) FROM scheme_i18n "
+        "WHERE application_md IS NOT NULL AND trim(application_md) != '' "
+        "GROUP BY lang ORDER BY 2 DESC")]
 
-print(f"  same count       : {same}")
-print(f"  grew by >4 items : {grew}")
-print(f"  produced nothing : {lost}")
-print(f"  text kept        : {total_chars_new}/{total_chars_old} chars "
-      f"({100 * total_chars_new / max(total_chars_old, 1):.1f}%)")
-for kind, slug, a, b in bigjump:
-    print(f"    {kind} {slug}: {a} -> {b}")
 
-print()
-hi = c.execute(
-    "SELECT slug, application_md FROM scheme_i18n "
-    "WHERE lang='hi' AND application_md IS NOT NULL AND application_md != ''"
-).fetchall()
-print(f"Hindi: {len(hi)} schemes with a translated apply section")
+def report(conn: sqlite3.Connection, lang: str, english: dict[str, str]) -> None:
+    rows = conn.execute(
+        "SELECT slug, application_md FROM scheme_i18n "
+        "WHERE lang = ? AND application_md IS NOT NULL "
+        "AND trim(application_md) != ''", (lang,)).fetchall()
+    if not rows:
+        print(f"{lang}: nothing backfilled yet\n")
+        return
 
-one_item_old = sum(1 for _, md in hi if len(old_parse(md, 15)) <= 2)
-one_item_new = sum(1 for _, md in hi if len(new_parse(md, 15)) <= 2)
-print(f"  collapsed to <=2 items, before : {one_item_old}")
-print(f"  collapsed to <=2 items, after  : {one_item_new}")
+    collapsed = shared = agree = 0
+    worst: list[tuple[str, int, int]] = []
+    for slug, md in rows:
+        steps = parse_list(md, LIMIT)
+        if len(steps) <= 2:
+            collapsed += 1
+        if slug in english:
+            shared += 1
+            want = len(parse_list(english[slug], LIMIT))
+            if len(steps) == want:
+                agree += 1
+            elif len(worst) < 5 and want - len(steps) >= 3:
+                worst.append((slug, want, len(steps)))
 
-# Structure should now agree between the two languages.
-agree_before = agree_after = both = 0
-en_by_slug = dict(rows)
-for slug, md in hi:
-    if slug not in en_by_slug:
-        continue
-    both += 1
-    e_old, e_new = old_parse(en_by_slug[slug], 15), new_parse(en_by_slug[slug], 15)
-    h_old, h_new = old_parse(md, 15), new_parse(md, 15)
-    agree_before += len(e_old) == len(h_old)
-    agree_after += len(e_new) == len(h_new)
-print(f"  same step count as English, before: {agree_before}/{both} "
-      f"({100 * agree_before / max(both, 1):.0f}%)")
-print(f"  same step count as English, after : {agree_after}/{both} "
-      f"({100 * agree_after / max(both, 1):.0f}%)")
+    total = len(rows)
+    print(f"{lang}: {total} schemes with a translated apply section")
+    print(f"  collapsed to <=2 items : {collapsed} "
+          f"({100 * collapsed / total:.0f}%)")
+    print(f"  same step count as English : {agree}/{shared} "
+          f"({100 * agree / max(shared, 1):.0f}%)")
+    for slug, want, got in worst:
+        print(f"    {slug}: English {want} steps, {lang} {got}")
+    print()
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("langs", nargs="*", help="language codes; default all")
+    parser.add_argument("--db", default=str(CATALOGUE_DB))
+    args = parser.parse_args()
+
+    conn = sqlite3.connect(args.db)
+    english = dict(conn.execute(
+        "SELECT slug, application_md FROM schemes "
+        "WHERE application_md IS NOT NULL AND trim(application_md) != ''"))
+    print(f"English: {len(english)} schemes with an apply section, "
+          f"{sum(1 for md in english.values() if len(parse_list(md, LIMIT)) <= 2)}"
+          f" of them collapsed\n")
+
+    for lang in (args.langs or languages(conn)):
+        report(conn, lang, english)
+    conn.close()
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

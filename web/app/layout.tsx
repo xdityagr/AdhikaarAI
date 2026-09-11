@@ -11,7 +11,7 @@ import { SiteHeader } from "@/components/site-header";
 import { Splash } from "@/components/splash";
 import { Toaster } from "@/components/ui/sonner";
 import { dirFor } from "@/lib/i18n/config";
-import { getLang } from "@/lib/i18n/server";
+import { getLang, getT } from "@/lib/i18n/server";
 import { getCatalogMeta } from "@/lib/api";
 import "./globals.css";
 
@@ -48,16 +48,26 @@ const hanken = localFont({
   fallback: ["system-ui", "Segoe UI", "sans-serif"],
 });
 
-export const metadata: Metadata = {
-  title: {
-    default: "Yojna Setu — find the schemes you actually qualify for",
-    template: "%s · Yojna Setu",
-  },
-  description:
-    "Yojna Setu finds the government schemes you qualify for, explains what they " +
-    "cost in rupees, and shows you where to go to apply. Built for SC, ST, OBC " +
-    "and other marginalised households.",
-};
+/**
+ * A function rather than a constant, because these two strings are the ones a
+ * person sees before they see the site at all — the browser tab, and the
+ * preview card when someone forwards the link on WhatsApp. They were English
+ * for every reader of every language, which is the one place where a fully
+ * translated interface still announced itself in English.
+ *
+ * Every other route already does this; the root layout was the one that did
+ * not, and its description is the fallback all of them inherit.
+ */
+export async function generateMetadata(): Promise<Metadata> {
+  const t = await getT();
+  return {
+    title: {
+      default: t("site.title"),
+      template: "%s · Yojna Setu",
+    },
+    description: t("site.description"),
+  };
+}
 
 export const viewport: Viewport = {
   themeColor: "#fdfcfa",

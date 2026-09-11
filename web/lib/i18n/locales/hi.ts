@@ -296,7 +296,7 @@ export const hi: Strings = {
   "check.focus.also": "और उसी जवाब में वह सब भी जिनके आप हक़दार हैं",
   "check.focus.submit": "यह योजना जाँचें",
   "check.matching.from": "योजनाएँ, आपने जो बताया उसके हिसाब से",
-  "wa.prefill.resume": "नमस्ते — वेबसाइट से आगे बढ़ रही हूँ। {code}",
+  "wa.prefill.resume": "नमस्ते — वेबसाइट से आगे बढ़ना है। {code}",
   "chat.continueWhatsApp": "इसे व्हाट्सएप पर आगे बढ़ाइए",
   "chat.continueWhatsApp.hint": "वहीं से चलेगा जहाँ आपने छोड़ा — दोबारा नहीं पूछा जाएगा।",
   "aadhaar.title": "अपने आधार कार्ड से यह भरिए",
@@ -529,4 +529,8 @@ export const hi: Strings = {
   "partners.estimated": "हमारा अनुमान, NSFDC का आँकड़ा नहीं",
   "schemes.unavailable": "योजनाओं की सूची अभी उपलब्ध नहीं है। यह एक स्थानीय प्रति है जो फिर से बन रही हो सकती है — एक मिनट बाद दोबारा खोजने से आमतौर पर काम हो जाता है।",
   "category.rebuilding": "योजनाओं की सूची फिर से बन रही है। तब तक सीधे देखें या खोजें।",
+  "documents.capture.noCamera": "कैमरा नहीं खुल सका। आप इसके बजाय कोई फोटो चुन सकते हैं।",
+  "documents.capture.unreadable": "वह फोटो पढ़ी नहीं जा सकी। कोई दूसरी आज़माएँ।",
+  "documents.capture.close": "बंद करें",
+  "site.title": "Yojna Setu — वे योजनाएँ ढूँढें जिनके आप वाकई पात्र हैं",
 };

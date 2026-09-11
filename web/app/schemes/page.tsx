@@ -136,8 +136,7 @@ export default async function SchemesPage({
 
           {!results.corpus_available ? (
             <p className="mt-8 border-s-2 border-clay ps-5 text-[0.9375rem] leading-relaxed text-clay">
-              The scheme list is not available right now. It is a local copy that
-              may be rebuilding — searching again in a minute usually works.
+              {t("schemes.unavailable")}
             </p>
           ) : null}
 

@@ -10,6 +10,7 @@ import { Camera, Check, Loader2 } from "lucide-react";
 
 import { DocumentCapture } from "@/components/document-capture";
 import { useLanguage } from "@/components/language-provider";
+import { documentLabel } from "@/lib/i18n/vocabulary";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -98,7 +99,7 @@ export function DocumentReadiness({
   slug: string;
   requirements: string[];
 }) {
-  const { t } = useLanguage();
+  const { lang, t } = useLanguage();
   const all = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
   const held = useMemo<Held>(() => all[slug] ?? {}, [all, slug]);
   const [capturing, setCapturing] = useState(false);
@@ -144,12 +145,20 @@ export function DocumentReadiness({
           // A real document that this scheme did not ask for. Saying so is more
           // useful than silence — it is how someone learns they are carrying
           // something they do not need, or that they picked the wrong scheme.
-          setMessage(t("documents.notOnList", { name: String(data.label) }));
+          setMessage(
+            t("documents.notOnList", {
+              name: documentLabel(lang, String(data.label)),
+            }),
+          );
           return;
         }
         const requirement = requirements[data.matched_index];
         update({ ...held, [requirement]: true });
-        setMessage(t("documents.ticked", { name: String(data.label) }));
+        setMessage(
+          t("documents.ticked", {
+            name: documentLabel(lang, String(data.label)),
+          }),
+        );
       } catch {
         setMessage(t("documents.failed"));
       } finally {
@@ -157,7 +166,7 @@ export function DocumentReadiness({
         setCapturing(false);
       }
     },
-    [held, requirements, slug, t, update],
+    [held, lang, requirements, slug, t, update],
   );
 
   const missing = useMemo(

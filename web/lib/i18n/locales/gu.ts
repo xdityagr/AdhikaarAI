@@ -529,4 +529,8 @@ export const gu: Strings = {
   "partners.estimated": "અમારો અંદાજ, NSFDC નો આંકડો નથી",
   "schemes.unavailable": "યોજનાઓની યાદી હાલ ઉપલબ્ધ નથી. આ એક સ્થાનિક નકલ છે જે ફરી બની રહી હોઈ શકે — એક મિનિટ પછી ફરી શોધવાથી સામાન્યપણે કામ થાય છે.",
   "category.rebuilding": "યોજનાઓની યાદી ફરી બની રહી છે. ત્યાં સુધી સીધું જુઓ અથવા શોધો.",
+  "documents.capture.noCamera": "કૅમેરા ખોલી શકાયો નહીં. તમે તેના બદલે ફોટો પસંદ કરી શકો છો.",
+  "documents.capture.unreadable": "એ ફોટો વાંચી શકાયો નહીં. બીજો પ્રયાસ કરો.",
+  "documents.capture.close": "બંધ કરો",
+  "site.title": "Yojna Setu — તમે ખરેખર પાત્ર હોય તેવી યોજનાઓ શોધો",
 };
