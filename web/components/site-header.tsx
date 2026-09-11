@@ -22,6 +22,10 @@ const NAV = [
   // check and every application form read from it, so it needs to be
   // reachable rather than something you find by accident.
   { href: "/me", key: "nav.me" },
+  // The Aadhaar scanner lived only inside the profile sheet, which meant the
+  // three-tap way to fill eleven fields was reachable only from the page you
+  // would open once those fields were already filled. It has a home now.
+  { href: "/documents", key: "nav.documents" },
   { href: "/chat", key: "nav.chat" },
 ] as const;
 

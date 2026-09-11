@@ -228,6 +228,7 @@ def build(
     profile: Optional[dict] = None,
     lang: str = "en",
     corpus_path: Path = CORPUS_PATH,
+    held: Optional[dict] = None,
 ) -> Optional[Pack]:
     """The completed pack for one scheme and one person.
 
@@ -262,8 +263,14 @@ def build(
             blank=not value,
         ))
 
-    documents = [Document(text=item) for item in
-                 parse_list(scheme.get("documents_md"))]
+    # `held` arrives from the caller — the browser owns it, because nothing about
+    # a person is stored here. Three states, and the third is why this is not a
+    # bool: True is "I have it", False is "I do not", and None is "nobody has
+    # asked", which must never print as missing. Someone who has not been through
+    # the checklist has not told us they are short of anything.
+    holdings = held or {}
+    documents = [Document(text=item, held=holdings.get(item))
+                 for item in parse_list(scheme.get("documents_md"))]
     steps = parse_list(scheme.get("application_md"), limit=15)
 
     pack = Pack(
