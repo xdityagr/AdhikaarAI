@@ -19,6 +19,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from src import dialect
 from src.config import get_settings
 
 logger = logging.getLogger(__name__)
@@ -191,8 +192,21 @@ async def _set_pragmas(db: aiosqlite.Connection) -> None:
     await db.execute("PRAGMA foreign_keys=ON")
 
 
-async def get_connection() -> aiosqlite.Connection:
-    """Get a new database connection with correct pragmas set."""
+async def get_connection():
+    """A connection, to whichever database this deployment is using.
+
+    `DATABASE_URL` selects Postgres; its absence selects SQLite. Nothing else in
+    this file knows the difference, because `src/dialect.py` returns a
+    connection with the same small surface either way.
+
+    The reason both exist: SQLite is exactly the right shape for seventy
+    kilobytes of state and is what tests and a laptop use, and it is the wrong
+    shape for surviving a deploy on a free host, where the container filesystem
+    is ephemeral and the opt-out table would be erased on every restart.
+    """
+    if dialect.is_postgres():
+        return await dialect.connect()
+
     settings = get_settings()
     # Ensure the data directory exists
     db_path = Path(settings.database_path)
@@ -221,7 +235,13 @@ async def _ensure_columns(
     For anything this can't express, delete data/yojnasetu.db and let
     init_database() rebuild it.
     """
-    cursor = await db.execute(f"PRAGMA table_info({table})")
+    if dialect.is_postgres():
+        # `information_schema` is the standard spelling of the same question.
+        cursor = await db.execute(
+            "SELECT ordinal_position, column_name FROM information_schema.columns "
+            "WHERE table_name = ?", (table,))
+    else:
+        cursor = await db.execute(f"PRAGMA table_info({table})")
     rows = await cursor.fetchall()
     if not rows:
         # Table doesn't exist yet — DDL will create it with every column.
@@ -242,6 +262,11 @@ async def init_database() -> None:
     try:
         for ddl in DDL_STATEMENTS:
             await db.execute(ddl)
+            # Postgres will not run another statement on a connection whose
+            # transaction has failed, so each DDL is committed as it lands.
+            # On SQLite this is a no-op beyond a flush.
+            if dialect.is_postgres():
+                await db.commit()
 
         for table, columns in ADDITIVE_COLUMNS.items():
             added = await _ensure_columns(db, table, columns)
@@ -249,7 +274,8 @@ async def init_database() -> None:
                 logger.info("Added columns to %s: %s", table, ", ".join(added))
 
         await db.commit()
-        logger.info("Database initialized successfully at %s", get_settings().database_path)
+        where = "Postgres" if dialect.is_postgres() else get_settings().database_path
+        logger.info("Database initialized successfully at %s", where)
     finally:
         await db.close()
 
@@ -269,10 +295,17 @@ async def is_message_processed(db: aiosqlite.Connection, message_id: str) -> boo
 
 
 async def mark_message_processed(db: aiosqlite.Connection, message_id: str) -> None:
-    """Record a message as processed. Idempotent — INSERT OR IGNORE."""
+    """Record a message as processed. Idempotent.
+
+    `ON CONFLICT DO NOTHING` rather than `INSERT OR IGNORE`: both say the same
+    thing to SQLite, but only one of them is also valid Postgres. Every
+    statement in this file is written in the dialect both accept, so moving to
+    Postgres is a driver change and not a rewrite.
+    """
     now = datetime.now(timezone.utc).isoformat()
     await db.execute(
-        "INSERT OR IGNORE INTO processed_messages (message_id, processed_at) VALUES (?, ?)",
+        "INSERT INTO processed_messages (message_id, processed_at) VALUES (?, ?) "
+        "ON CONFLICT (message_id) DO NOTHING",
         (message_id, now),
     )
     await db.commit()
@@ -315,8 +348,11 @@ async def put_handoff(db: aiosqlite.Connection, code: str, context: str,
                       history: str) -> None:
     now = datetime.now(timezone.utc).isoformat()
     await db.execute(
-        "INSERT OR REPLACE INTO handoff (code, context, history, created_at) "
-        "VALUES (?, ?, ?, ?)",
+        "INSERT INTO handoff (code, context, history, created_at) "
+        "VALUES (?, ?, ?, ?) "
+        "ON CONFLICT (code) DO UPDATE SET "
+        "  context=excluded.context, history=excluded.history, "
+        "  created_at=excluded.created_at",
         (code, context, history, now),
     )
     await db.commit()
@@ -438,7 +474,17 @@ async def get_or_create_user(db: aiosqlite.Connection, user_id: str) -> dict:
             (now, user_id),
         )
         await db.commit()
-        return dict(row)
+        # Built by position rather than `dict(row)`. SQLite hands back an
+        # aiosqlite.Row, which indexes both ways; psycopg hands back a tuple.
+        # Every other read in this file is already positional, and one
+        # name-based access would be the only thing standing between here and
+        # Postgres.
+        return {
+            "user_id": row[0],
+            "preferred_language": row[1],
+            "created_at": row[2],
+            "last_active_at": row[3],
+        }
     else:
         # Create new user
         await db.execute(
