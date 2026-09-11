@@ -63,6 +63,13 @@ class Settings(BaseSettings):
         default="",
         description="Phone Number ID from the WhatsApp app dashboard (not the number)",
     )
+    whatsapp_business_account_id: str = Field(
+        default="",
+        description="WABA ID. Not needed to SEND — that is the phone number id "
+                    "above — but it is what message templates are created and "
+                    "listed against, which is what A3's change alerts wait on. "
+                    "See docs/whatsapp-templates.md.",
+    )
     whatsapp_verify_token: str = Field(
         default="",
         description="A string we choose; Meta echoes it when registering the webhook",
