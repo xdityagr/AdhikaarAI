@@ -4,6 +4,7 @@ import { ArrowLeft } from "lucide-react";
 
 import { ApplicationPack } from "@/components/application-pack";
 import { DocumentReadiness } from "@/components/document-readiness";
+import { SaveApplication } from "@/components/save-application";
 import { splitRequirements } from "@/lib/documents";
 import { getScheme } from "@/lib/api";
 import { getLang, getT } from "@/lib/i18n/server";
@@ -66,6 +67,8 @@ export default async function ApplyPage({
       </header>
 
       <div className="mt-8 space-y-6">
+        <SaveApplication slug={slug} scheme={scheme.name.trim()} />
+
         <ApplicationPack slug={slug} />
 
         {/*
