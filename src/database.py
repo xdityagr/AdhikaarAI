@@ -67,6 +67,24 @@ DDL_STATEMENTS = [
         created_at TEXT NOT NULL
     )
     """,
+    # What we have learned about a person, so they do not have to say it twice
+    # on a different channel.
+    #
+    # Keyed on the phone number because that is the only identifier that spans
+    # WhatsApp and a phone call, and the only one somebody gives us by their own
+    # action rather than by being tracked. The website contributes through a
+    # handoff code, which is explicit and consented; nothing here is collected
+    # from a browser that never crossed over.
+    #
+    # Deleted outright on STOP. "Leave me alone" cannot mean "we will stop
+    # writing but keep what we have."
+    """
+    CREATE TABLE IF NOT EXISTS user_context (
+        user_id TEXT PRIMARY KEY,
+        context TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+    )
+    """,
     """
     CREATE TABLE IF NOT EXISTS processed_messages (
         message_id TEXT PRIMARY KEY,
@@ -257,6 +275,35 @@ async def mark_message_processed(db: aiosqlite.Connection, message_id: str) -> N
         "INSERT OR IGNORE INTO processed_messages (message_id, processed_at) VALUES (?, ?)",
         (message_id, now),
     )
+    await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# What we know about a person, across channels
+# ---------------------------------------------------------------------------
+
+async def load_context(db: aiosqlite.Connection, user_id: str) -> Optional[str]:
+    cursor = await db.execute(
+        "SELECT context FROM user_context WHERE user_id = ?", (user_id,))
+    row = await cursor.fetchone()
+    return row[0] if row else None
+
+
+async def save_context(db: aiosqlite.Connection, user_id: str,
+                       context: str) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO user_context (user_id, context, updated_at) VALUES (?, ?, ?)
+           ON CONFLICT(user_id) DO UPDATE SET
+             context=excluded.context, updated_at=excluded.updated_at""",
+        (user_id, context, now),
+    )
+    await db.commit()
+
+
+async def forget_context(db: aiosqlite.Connection, user_id: str) -> None:
+    """Erase everything we learned. Called on STOP."""
+    await db.execute("DELETE FROM user_context WHERE user_id = ?", (user_id,))
     await db.commit()
 
 
