@@ -26,7 +26,7 @@ services:
       # let the data change underneath a running service with nothing to show
       # for it.
       - key: CORPUS_TAG
-        value: corpus-2026-09-08
+        value: corpus-2026-09-12
       - key: CORPUS_REPO
         value: xdityagr/AdhikaarAI
 

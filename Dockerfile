@@ -29,7 +29,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Published by scripts/publish_corpus.py. Pinned by tag so a deployment is
 # reproducible — a corpus that changed silently underneath a running service
 # would be very hard to notice from the outside.
-ARG CORPUS_TAG=corpus-2026-09-08
+ARG CORPUS_TAG=corpus-2026-09-12
 ARG CORPUS_REPO=xdityagr/AdhikaarAI
 
 RUN mkdir -p /catalogue \
