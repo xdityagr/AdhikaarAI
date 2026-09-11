@@ -459,4 +459,7 @@ export const bn: Strings = {
   "track.official.dbt.body": "কোন প্রকল্পগুলি সরাসরি অ্যাকাউন্টে টাকা দেয়, এবং তাদের অবস্থার পাতা।",
   "track.official.cpgrams.body": "সরকারি অভিযোগের মাধ্যম। প্রতিটি মন্ত্রককে উত্তর দিতেই হয়।",
   "results.stillToCheck.label": "এখনও যাচাই করা বাকি",
+  "apply.mode.online": "অনলাইনে",
+  "apply.mode.offline": "সশরীরে গিয়ে",
+  "apply.mode.both": "অনলাইনে বা সশরীরে গিয়ে",
 };

@@ -463,4 +463,7 @@ export const ur: Strings = {
   "track.official.dbt.body": "کون سی اسکیمیں براہِ راست کھاتوں میں ادائیگی کرتی ہیں، اور ان کے اسٹیٹس صفحات۔",
   "track.official.cpgrams.body": "سرکاری شکایت کا ذریعہ۔ ہر وزارت کو جواب دینا ہی ہوتا ہے۔",
   "results.stillToCheck.label": "ابھی جانچنا باقی",
+  "apply.mode.online": "آن لائن",
+  "apply.mode.offline": "خود جا کر",
+  "apply.mode.both": "آن لائن یا خود جا کر",
 };

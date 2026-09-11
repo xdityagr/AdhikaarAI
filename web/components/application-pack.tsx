@@ -197,9 +197,19 @@ export function ApplicationPack({ slug }: { slug: string }) {
       ) : null}
 
       {/* ----------------------------------------------------------- steps */}
-      {pack.steps.length ? (
+      {pack.steps.length || pack.mode ? (
         <section>
-          <h2 className="font-display text-lg font-bold">{t("apply.steps")}</h2>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <h2 className="font-display text-lg font-bold">{t("apply.steps")}</h2>
+            {/* Whether you can do this from home, or must stand in a queue.
+                It came out of the scheme's own "**Offline**" heading, which
+                used to be numbered as step 1. */}
+            {pack.mode === "online" || pack.mode === "offline" || pack.mode === "both" ? (
+              <span className="rounded-md bg-secondary px-2 py-0.5 text-xs font-semibold text-primary">
+                {t(`apply.mode.${pack.mode}` as StringKey)}
+              </span>
+            ) : null}
+          </div>
           <ol className="mt-4 space-y-2.5">
             {pack.steps.map((s, i) => (
               <li key={i} className="flex gap-3 text-sm leading-relaxed">

@@ -127,6 +127,107 @@ class TestParsing:
     def test_mode_detection(self, text, expected):
         assert application.detect_mode(text) == expected
 
+    def test_a_stated_mode_beats_the_keyword_sweep(self):
+        """A URL is not evidence of an online route.
+
+        An offline procedure that links to the form you must print contains
+        "http", so the sweep called it "both" and the page told someone they
+        could apply from home when the same document said to go to the office.
+        The scheme states its mode in a heading; that heading is the answer.
+        """
+        text = ("**Offline**\n\n**Step 1:** Visit the office of the "
+                "[authority](https://fisheries.py.gov.in/sub-offices).")
+        assert application.detect_mode(text) == "offline"
+
+    def test_both_modes_stated_is_both(self):
+        text = "**Online**\n\n**Step 1:** Register.\n\n**Offline**\n\n**Step 1:** Visit."
+        assert application.detect_mode(text) == "both"
+
+
+class TestStepsSurviveTranslation:
+    """The translated records arrive in a different shape to the English ones.
+
+    myScheme's machine translation puts every step on one line and mangles the
+    bold markers, so a Hindi "how to apply" was rendering as a single numbered
+    item containing the whole procedure and a scattering of literal asterisks.
+    """
+
+    ENGLISH = (
+        "**Offline**\n\n"
+        "**Step 1:** Visit the office of the concerned authority.\n"
+        "**Step 1:** Request the hard copy of the prescribed format.\n"
+        "**Step 2:** Fill in all the mandatory fields.\n"
+        "**Step 3:** Submit the form with the documents.\n"
+    )
+    #: The same record as Hindi: one line, `**` broken into `* * `, and some
+    #: labels with no markers left at all.
+    HINDI = (
+        "**Offline**\n\n"
+        "* * चरण 1: * * इच्छुक आवेदक को कार्यालय में जाना चाहिए। "
+        "* * चरण 1: * * हार्ड कॉपी का अनुरोध करना चाहिए। "
+        "चरण 2: सभी अनिवार्य क्षेत्रों को भरें। "
+        "चरण 3: दस्तावेजों के साथ जमा करें।"
+    )
+
+    def test_english_splits_into_one_item_per_step(self):
+        assert len(application.parse_list(self.ENGLISH)) == 4
+
+    def test_hindi_splits_the_same_way(self):
+        """The label is the only boundary here — there are no newlines."""
+        assert len(application.parse_list(self.HINDI)) == 4
+
+    def test_the_two_languages_agree(self):
+        assert len(application.parse_list(self.ENGLISH)) == \
+            len(application.parse_list(self.HINDI))
+
+    def test_no_asterisks_reach_the_reader(self):
+        """`* * चरण 1: * *` was printed verbatim, mid-sentence."""
+        for item in application.parse_list(self.HINDI):
+            assert "*" not in item, item
+
+    def test_the_step_label_is_not_printed(self):
+        """The renderer numbers the list. Printing the label too gives
+        "1. Step 1: …", and where the source repeats a number — this corpus has
+        schemes with two "Step 1"s — a list that contradicts its own numbering.
+        """
+        items = application.parse_list(self.ENGLISH)
+        assert not any(i.startswith("Step ") for i in items), items
+        assert items[0] == "Visit the office of the concerned authority."
+
+    def test_the_mode_heading_is_not_a_step(self):
+        """It is a property of the procedure, and `detect_mode` already has it."""
+        assert "Offline" not in application.parse_list(self.ENGLISH)
+
+    def test_two_mode_headings_are_kept_as_separators(self):
+        """One heading is this document's mode. Two are the boundary between
+        two different procedures, and dropping those would merge them."""
+        text = ("**Online**\n\n**Step 1:** Register on the portal.\n\n"
+                "**Offline**\n\n**Step 1:** Visit the office.\n")
+        items = application.parse_list(text)
+        assert "Online" in items and "Offline" in items
+
+    def test_a_scheme_with_only_a_mode_yields_no_steps(self):
+        """185 schemes publish nothing but "**Online**". Reporting one step
+        called "Online" was a count of one where the truth is none — the pack
+        says so with its own note instead."""
+        assert application.parse_list("**Online**") == []
+        assert application.detect_mode("**Online**") == "online"
+
+    def test_a_link_split_by_translation_still_resolves(self):
+        """Translation leaves `[text] (url)` with a space, which is no longer a
+        link — so the brackets reached the page around the only words in the
+        sentence a person might want to click."""
+        item = application.parse_list(
+            "**Step 1:** Visit the [authority] (https://x.gov.in) office.")[0]
+        assert "[" not in item and "]" not in item
+        assert "https://x.gov.in" in item
+
+    def test_a_number_in_prose_is_not_mistaken_for_a_step(self):
+        """The label pattern is deliberately narrow: a word, a small number, a
+        colon. Prose that merely contains a figure must not be chopped up."""
+        text = "Carry a photocopy of ration card 12345 and two photographs."
+        assert application.parse_list(text) == [text]
+
 
 class TestHandoff:
     async def test_a_code_carries_the_context(self):

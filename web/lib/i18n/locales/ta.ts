@@ -459,4 +459,7 @@ export const ta: Strings = {
   "track.official.dbt.body": "எந்தத் திட்டங்கள் நேரடியாகக் கணக்கில் பணம் செலுத்துகின்றன, அவற்றின் நிலைப் பக்கங்கள்.",
   "track.official.cpgrams.body": "அதிகாரப்பூர்வ புகார் வழி. ஒவ்வொரு அமைச்சகமும் பதிலளித்தே ஆக வேண்டும்.",
   "results.stillToCheck.label": "இன்னும் சரிபார்க்க வேண்டும்",
+  "apply.mode.online": "இணையத்தில்",
+  "apply.mode.offline": "நேரில் சென்று",
+  "apply.mode.both": "இணையத்தில் அல்லது நேரில் சென்று",
 };

@@ -459,4 +459,7 @@ export const gu: Strings = {
   "track.official.dbt.body": "કઈ યોજનાઓ સીધા ખાતામાં ચૂકવે છે, અને તેમનાં સ્થિતિ પાનાં.",
   "track.official.cpgrams.body": "સત્તાવાર ફરિયાદ માર્ગ. દરેક મંત્રાલયે જવાબ આપવો જ પડે છે.",
   "results.stillToCheck.label": "હજી તપાસવાનું બાકી",
+  "apply.mode.online": "ઑનલાઇન",
+  "apply.mode.offline": "જાતે જઈને",
+  "apply.mode.both": "ઑનલાઇન અથવા જાતે જઈને",
 };
