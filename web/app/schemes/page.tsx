@@ -9,17 +9,18 @@ import { ButtonLink } from "@/components/ui/button-link";
 import { Input } from "@/components/ui/input";
 import { browseSchemes, getCatalogMeta, type SchemeCard } from "@/lib/api";
 import { formatNumber } from "@/lib/i18n";
-import { getLang } from "@/lib/i18n/server";
+import { getLang, getT } from "@/lib/i18n/server";
 import { categoryLabel, levelLabel } from "@/lib/i18n/vocabulary";
 import { translator, type Translate } from "@/lib/i18n";
 import type { Lang } from "@/lib/i18n/config";
 
-export const metadata = {
-  title: "All schemes",
-  description:
-    "Browse every welfare and credit scheme in the Yojna Setu corpus, filtered " +
-    "by category, state and level of government.",
-};
+export async function generateMetadata() {
+  const t = await getT();
+  return {
+    title: t("schemes.h1"),
+    description: t("schemes.meta.description"),
+  };
+}
 
 const PAGE_SIZE = 24;
 
@@ -141,7 +142,7 @@ export default async function SchemesPage({
           ) : null}
 
           {results.items.length === 0 && results.corpus_available ? (
-            <EmptyState />
+            <EmptyState t={t} />
           ) : (
             <ul className="mt-2 border-t border-border">
               {results.items.map((scheme) => (
@@ -223,17 +224,17 @@ function SchemeListCard({
   );
 }
 
-function EmptyState() {
+function EmptyState({ t }: { t: Translate }) {
   return (
     <div className="mt-12 border-t border-border pt-16 text-center">
-      <p className="font-display text-[1.375rem] font-normal">Nothing matched that.</p>
+      <p className="font-display text-[1.375rem] font-normal">
+        {t("schemes.empty.title")}
+      </p>
       <p className="mx-auto mt-3 max-w-[52ch] text-[0.9375rem] leading-relaxed text-muted-foreground">
-        Try a plainer word — &ldquo;pension&rdquo; rather than &ldquo;old age
-        monthly support&rdquo; — or clear a filter. If you tell us about
-        yourself instead, we can search on your behalf.
+        {t("schemes.empty.body")}
       </p>
       <ButtonLink href="/check" size="pill" className="mt-7">
-        Check my eligibility
+        {t("home.cta.primary")}
       </ButtonLink>
     </div>
   );

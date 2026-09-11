@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/components/language-provider";
+import type { StringKey } from "@/lib/i18n";
 import {
   type Application,
   getServerSnapshot,
@@ -29,45 +30,25 @@ import { cn } from "@/lib/utils";
  * When someone checks the official portal, the words on their screen should be
  * the words they already read here — a mismatch is what makes people think
  * something has gone wrong.
+ *
+ * Keys rather than sentences. A person tracking their money is the last one who
+ * should have to read English to find out which stage they have reached.
  */
 const STAGES = [
-  {
-    id: "APPLIED",
-    label: "Applied",
-    detail: "Form submitted at the branch or agency, with documents.",
-    expectedDays: 0,
-  },
-  {
-    id: "DOCS_VERIFIED",
-    label: "Documents verified",
-    detail: "Caste certificate, income proof and project papers checked.",
-    expectedDays: 15,
-  },
-  {
-    id: "SANCTIONED",
-    label: "Sanctioned",
-    detail: "The agency has approved the loan amount.",
-    expectedDays: 45,
-  },
-  {
-    id: "PFMS_VALIDATED",
-    label: "PFMS validated",
-    detail: "Your bank account passed validation on the payment system.",
-    expectedDays: 60,
-  },
-  {
-    id: "PAYMENT_INITIATED",
-    label: "Payment initiated",
-    detail: "The transfer has been ordered.",
-    expectedDays: 75,
-  },
-  {
-    id: "CREDITED",
-    label: "Money credited",
-    detail: "Funds are in your bank account.",
-    expectedDays: 90,
-  },
-] as const;
+  { id: "APPLIED", label: "track.stage.applied", expectedDays: 0 },
+  { id: "DOCS_VERIFIED", label: "track.stage.docs", expectedDays: 15 },
+  { id: "SANCTIONED", label: "track.stage.sanctioned", expectedDays: 45 },
+  { id: "PFMS_VALIDATED", label: "track.stage.pfms", expectedDays: 60 },
+  { id: "PAYMENT_INITIATED", label: "track.stage.payment", expectedDays: 75 },
+  { id: "CREDITED", label: "track.stage.credited", expectedDays: 90 },
+] as const satisfies readonly {
+  id: string;
+  label: StringKey;
+  expectedDays: number;
+}[];
+
+/** Each stage's one-line explanation, keyed off the label. */
+const detailKey = (label: StringKey) => `${label}.detail` as StringKey;
 
 /* The clock, read the same way as any other external source.
  *
@@ -182,6 +163,7 @@ function AddForm({
   onAdd: (application: Omit<Application, "id" | "stageIndex" | "status">) => void;
   onCancel: () => void;
 }) {
+  const { t } = useLanguage();
   const [scheme, setScheme] = useState("");
   const [reference, setReference] = useState("");
   const [office, setOffice] = useState("");
@@ -205,49 +187,49 @@ function AddForm({
         });
       }}
     >
-      <h2 className="font-display text-[1.125rem] font-normal">Add an application</h2>
+      <h2 className="font-display text-[1.125rem] font-normal">{t("track.add")}</h2>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
           <Label htmlFor="scheme" className="text-sm font-medium">
-            Which scheme?
+            {t("track.form.scheme")}
           </Label>
           <Input
             id="scheme"
             required
             value={scheme}
             onChange={(event) => setScheme(event.target.value)}
-            placeholder="e.g. Micro Finance Scheme"
+            placeholder={t("track.form.scheme.placeholder")}
             className="mt-2 h-12 rounded-xl bg-paper text-base"
           />
         </div>
         <div>
           <Label htmlFor="reference" className="text-sm font-medium">
-            Reference number
+            {t("track.form.reference")}
           </Label>
           <Input
             id="reference"
             value={reference}
             onChange={(event) => setReference(event.target.value)}
-            placeholder="From your receipt"
+            placeholder={t("track.form.reference.placeholder")}
             className="mt-2 h-12 rounded-xl bg-paper text-base"
           />
         </div>
         <div>
           <Label htmlFor="office" className="text-sm font-medium">
-            Where did you apply?
+            {t("track.form.office")}
           </Label>
           <Input
             id="office"
             value={office}
             onChange={(event) => setOffice(event.target.value)}
-            placeholder="Branch or agency"
+            placeholder={t("track.form.office.placeholder")}
             className="mt-2 h-12 rounded-xl bg-paper text-base"
           />
         </div>
         <div>
           <Label htmlFor="date" className="text-sm font-medium">
-            Date you applied
+            {t("track.form.date")}
           </Label>
           <Input
             id="date"
@@ -261,7 +243,7 @@ function AddForm({
 
       <div className="flex gap-3">
         <Button type="submit" className="h-11 rounded-full px-5">
-          Save
+          {t("track.form.save")}
         </Button>
         <Button
           type="button"
@@ -269,7 +251,7 @@ function AddForm({
           className="h-11 rounded-full px-5"
           onClick={onCancel}
         >
-          Cancel
+          {t("track.form.cancel")}
         </Button>
       </div>
     </form>
@@ -285,6 +267,7 @@ function ApplicationCard({
   onAdvance: (stageIndex: number) => void;
   onRemove: () => void;
 }) {
+  const { t } = useLanguage();
   const stage = STAGES[application.stageIndex];
   const next = STAGES[application.stageIndex + 1];
 
@@ -309,19 +292,27 @@ function ApplicationCard({
         <div>
           <h2 className="font-display text-[1.125rem] font-normal">{application.scheme}</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            {[application.office, application.reference && `Ref ${application.reference}`]
+            {[
+              application.office,
+              application.reference &&
+                t("track.card.ref", { reference: application.reference }),
+            ]
               .filter(Boolean)
               .join(" · ")}
           </p>
           <p className="text-sm text-muted-foreground">
-            Applied {daysSince} {daysSince === 1 ? "day" : "days"} ago
+            {daysSince === 0
+              ? t("track.card.applied.today")
+              : daysSince === 1
+                ? t("track.card.applied.one")
+                : t("track.card.applied", { days: daysSince })}
           </p>
         </div>
         <Button
           variant="ghost"
           size="icon"
           onClick={onRemove}
-          aria-label="Remove this application"
+          aria-label={t("track.card.remove")}
         >
           <Trash2 className="size-4" />
         </Button>
@@ -361,11 +352,13 @@ function ApplicationCard({
                     !done && "text-muted-foreground",
                   )}
                 >
-                  {entry.label}
+                  {t(entry.label)}
                 </p>
                 <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
-                  {entry.detail}
-                  {entry.expectedDays > 0 ? ` Usually by day ${entry.expectedDays}.` : ""}
+                  {t(detailKey(entry.label))}
+                  {entry.expectedDays > 0
+                    ? ` ${t("track.stage.usuallyBy", { days: entry.expectedDays })}`
+                    : ""}
                 </p>
               </div>
             </li>
@@ -379,11 +372,11 @@ function ApplicationCard({
             className="h-10 px-4"
             onClick={() => onAdvance(application.stageIndex + 1)}
           >
-            Mark &ldquo;{next.label}&rdquo;
+            {t("track.card.mark", { stage: t(next.label) })}
           </Button>
         ) : (
           <p className="text-sm font-medium text-verified">
-            Complete. The money reached you.
+            {t("track.card.complete")}
           </p>
         )}
         {application.stageIndex > 0 ? (
@@ -392,35 +385,32 @@ function ApplicationCard({
             className="h-10 px-4"
             onClick={() => onAdvance(application.stageIndex - 1)}
           >
-            Undo
+            {t("track.card.undo")}
           </Button>
         ) : null}
       </div>
 
-      {overdue && next ? <Escalation stage={stage.label} next={next.label} /> : null}
+      {overdue && next ? (
+        <Escalation stage={t(stage.label)} next={t(next.label)} />
+      ) : null}
     </article>
   );
 }
 
 function Escalation({ stage, next }: { stage: string; next: string }) {
+  const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
 
-  const grievance =
-    `I applied for an NSFDC-funded loan and my application has been at the ` +
-    `"${stage}" stage beyond the usual time. It should have reached "${next}" ` +
-    `by now. I request a status update and a written reason for the delay, ` +
-    `along with the name of the officer handling my file.`;
+  const grievance = t("track.escalate.grievance", { stage, next });
 
   return (
     <div className="mt-5 rounded-xl border border-clay/25 bg-clay-soft p-5">
       <h3 className="flex items-center gap-2 text-sm font-semibold text-clay">
         <FileWarning className="size-4" />
-        This has taken longer than it should
+        {t("track.escalate.title")}
       </h3>
       <p className="mt-2 text-sm leading-relaxed text-clay/90">
-        Ask the branch first — most delays are a missing document nobody told you
-        about. If that goes nowhere, this is the text of a grievance you can file
-        on CPGRAMS.
+        {t("track.escalate.body")}
       </p>
 
       <p className="mt-3 rounded-lg border border-clay/20 bg-paper p-3 text-sm leading-relaxed">
@@ -438,7 +428,7 @@ function Escalation({ stage, next }: { stage: string; next: string }) {
             });
           }}
         >
-          {copied ? "Copied" : "Copy this text"}
+          {copied ? t("track.escalate.copied") : t("track.escalate.copy")}
         </Button>
         <Button
           variant="outline"
@@ -452,7 +442,7 @@ function Escalation({ stage, next }: { stage: string; next: string }) {
             />
           }
         >
-          File on CPGRAMS
+          {t("track.escalate.file")}
           <ExternalLink className="size-3.5" />
         </Button>
       </div>
@@ -468,17 +458,17 @@ function OfficialLinks({ className }: { className?: string }) {
     {
       href: "https://pfms.nic.in/Users/LoginDetails/Login.aspx",
       title: "PFMS — Know Your Payment",
-      body: "The government's own payment status, by bank account number.",
+      body: t("track.official.pfms.body"),
     },
     {
       href: "https://dbtbharat.gov.in/",
       title: "DBT Bharat",
-      body: "Which schemes pay directly into accounts, and their status pages.",
+      body: t("track.official.dbt.body"),
     },
     {
       href: "https://pgportal.gov.in/",
       title: "CPGRAMS",
-      body: "The official grievance channel. Every ministry must respond.",
+      body: t("track.official.cpgrams.body"),
     },
   ];
 

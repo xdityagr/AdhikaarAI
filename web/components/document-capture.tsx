@@ -36,14 +36,17 @@ export function DocumentCapture({
   onClose,
   privacyNote,
   busy = false,
-  label = "Photograph a document",
+  label,
 }: {
   onCaptured: (file: Blob) => void | Promise<void>;
   onClose: () => void;
   /** Shown before the shutter. Say where the image goes; do not be vague. */
   privacyNote: string;
   busy?: boolean;
-  label?: string;
+  /** Required, and translated by the caller. It used to default to an English
+   *  sentence, which is how a component nobody had touched in weeks would have
+   *  started showing English again the first time a new caller forgot it. */
+  label: string;
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);

@@ -4,12 +4,10 @@ import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/i18n/server";
 import { ButtonLink } from "@/components/ui/button-link";
 
-export const metadata = {
-  title: "Where to apply",
-  description:
-    "The state channelising agencies, banks and RRBs that actually disburse " +
-    "NSFDC credit, with how much of their allocation they have deployed.",
-};
+export async function generateMetadata() {
+  const t = await getT();
+  return { title: t("partners.h1"), description: t("partners.lede") };
+}
 
 interface Partner {
   partner_id: string;

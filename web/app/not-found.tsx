@@ -4,7 +4,10 @@ import { Compass } from "lucide-react";
 import { ButtonLink } from "@/components/ui/button-link";
 import { getT } from "@/lib/i18n/server";
 
-export const metadata = { title: "Page not found" };
+export async function generateMetadata() {
+  const t = await getT();
+  return { title: t("notfound.h1") };
+}
 
 /**
  * Without this file Next serves its own 404, which paints itself black on a

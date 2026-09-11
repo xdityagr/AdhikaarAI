@@ -3,39 +3,52 @@ import { AlertCircle, ArrowLeft, BadgeCheck, HelpCircle } from "lucide-react";
 
 import { ButtonLink } from "@/components/ui/button-link";
 import { checkScheme, discover, type DiscoveryMatch, type SchemeVerdict } from "@/lib/api";
-import { getT } from "@/lib/i18n/server";
+import { type Translate } from "@/lib/i18n";
+import type { Lang } from "@/lib/i18n/config";
+import { facetLabel, facetList } from "@/lib/i18n/vocabulary";
+import { getLang, getT } from "@/lib/i18n/server";
 import { answersToPayload, queryToAnswers } from "@/lib/facets";
 
-export const metadata = {
-  title: "Your matches",
-  description: "The government schemes you are likely to be entitled to.",
-};
+export async function generateMetadata() {
+  const t = await getT();
+  return { title: t("results.title"), description: t("results.description") };
+}
 
 // The results depend entirely on the query string, and a person's answers are
 // nobody's business — never cached, never prerendered.
 export const dynamic = "force-dynamic";
 
+/* Keys, not sentences. Resolved at render against the reader's language —
+   holding the English here is how "Worth checking" survived a switch to
+   Hindi on a page where everything around it had changed. */
+/* Indian digit grouping — 1,23,456 rather than 123,456 — with Latin numerals,
+   which is what every government form and notice board uses. Deliberately not
+   the reader's own locale: `toLocaleString("bn-IN")` can render Bengali
+   numerals, and a person copying a figure onto a paper form needs the digits
+   the clerk is expecting. */
+const GROUPING = "en-IN";
+
 const STRENGTH = {
   ELIGIBLE: {
-    label: "Eligible",
-    blurb: "Every published rule checked",
+    label: "results.strength.eligible",
+    blurb: "results.strength.eligible.blurb",
     icon: BadgeCheck,
     className: "bg-verified-soft text-verified",
   },
   LIKELY: {
-    label: "Likely",
-    blurb: "You meet the conditions we hold",
+    label: "results.strength.likely",
+    blurb: "results.strength.likely.blurb",
     icon: BadgeCheck,
     className: "bg-secondary text-primary",
   },
   CHECK: {
-    label: "Worth checking",
-    blurb: "Asks about something you did not answer",
+    label: "results.strength.check",
+    blurb: "results.strength.check.blurb",
     icon: HelpCircle,
     className: "bg-gold-soft text-gold-ink",
   },
   NOT_MATCHED: {
-    label: "Not a match",
+    label: "results.strength.notMatched",
     blurb: "",
     icon: AlertCircle,
     className: "bg-muted text-muted-foreground",
@@ -50,35 +63,32 @@ export default async function ResultsPage({
   const params = await searchParams;
   const answers = queryToAnswers(params);
   const payload = answersToPayload(answers);
+  const lang = await getLang();
   const t = await getT();
 
   // Arrived from one scheme's page: that scheme's verdict is the answer they
   // came for, so it goes first, ahead of the hundreds of general matches.
   const wanted = Array.isArray(params.scheme) ? params.scheme[0] : params.scheme;
-  const focus = wanted ? await checkScheme(wanted, payload) : null;
+  const focus = wanted ? await checkScheme(wanted, { ...payload, lang }) : null;
 
   let result;
   try {
-    result = await discover({ ...payload, limit: 60 });
+    result = await discover({ ...payload, limit: 60, lang });
   } catch {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center">
         <h1 className="font-display text-[1.5rem] font-normal">
-          We could not run the match just now
+          {t("results.error.h1")}
         </h1>
-        <p className="mt-3 text-muted-foreground">
-          The scheme engine did not answer. Your answers are safe in the address
-          bar — try again in a moment.
-        </p>
+        <p className="mt-3 text-muted-foreground">{t("results.error.body")}</p>
         <ButtonLink href={`/check`} className="mt-6 h-11 px-6">
-          Back to the questions
+          {t("results.error.back")}
         </ButtonLink>
       </div>
     );
   }
 
   const { matches, counts } = result;
-  const answeredCount = Object.keys(answers).length;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 sm:py-14">
@@ -87,72 +97,67 @@ export default async function ResultsPage({
         className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground hover:text-primary"
       >
         <ArrowLeft className="size-4" />
-        Change my answers
+        {t("results.back")}
       </Link>
 
-      {focus ? <FocusVerdict verdict={focus} t={t} /> : null}
+      {focus ? <FocusVerdict verdict={focus} t={t} lang={lang} /> : null}
 
       <header className="mt-6 border-b border-border pb-8">
         {/* The headline is the targeted count, not the total. A scheme that
             restricts nobody matches everybody, so "664 matches" is true and
             useless; "41 are meant for you" is the number worth acting on. */}
         <h1 className="font-display text-[2rem] font-light sm:text-4xl">
-          {result.total_targeted > 0 ? (
-            <>
-              {result.total_targeted.toLocaleString("en-IN")}{" "}
-              {result.total_targeted === 1 ? "scheme is" : "schemes are"} aimed
-              at people like you
-            </>
-          ) : (
-            <>
-              {result.total_matched.toLocaleString("en-IN")}{" "}
-              {result.total_matched === 1 ? "scheme" : "schemes"} you may be
-              entitled to
-            </>
-          )}
+          {result.total_targeted > 0
+            ? result.total_targeted === 1
+              ? t("results.h1.targeted.one")
+              : t("results.h1.targeted", {
+                  count: result.total_targeted.toLocaleString(GROUPING),
+                })
+            : result.total_matched === 1
+              ? t("results.h1.plain.one")
+              : t("results.h1.plain", {
+                  count: result.total_matched.toLocaleString(GROUPING),
+                })}
         </h1>
         <p className="mt-3 max-w-3xl text-muted-foreground">
-          {result.total_targeted > 0 ? (
-            <>
-              They name your community, work or circumstances directly. Another{" "}
-              {(result.total_matched - result.total_targeted).toLocaleString("en-IN")}{" "}
-              schemes are open to you without singling anyone out — all of them
-              are below, strongest first.
-            </>
-          ) : (
-            <>
-              Checked against {result.total_considered.toLocaleString("en-IN")}{" "}
-              schemes using {answeredCount}{" "}
-              {answeredCount === 1 ? "answer" : "answers"}. Telling us your
-              community or your work is what surfaces the schemes meant
-              specifically for you.
-            </>
-          )}
+          {result.total_targeted > 0
+            ? t("results.lede.targeted", {
+                count: (result.total_matched - result.total_targeted)
+                  .toLocaleString(GROUPING),
+              })
+            : t("results.lede.plain", {
+                total: result.total_considered.toLocaleString(GROUPING),
+              })}
         </p>
 
         <div className="mt-5 flex flex-wrap gap-3">
-          <Tally count={counts.eligible} label="Eligible" tone="verified" />
-          <Tally count={counts.likely} label="Likely" tone="primary" />
-          <Tally count={counts.check} label="Worth checking" tone="gold" />
+          <Tally count={counts.eligible} label={t("results.strength.eligible")} tone="verified" />
+          <Tally count={counts.likely} label={t("results.strength.likely")} tone="primary" />
+          <Tally count={counts.check} label={t("results.strength.check")} tone="gold" />
         </div>
       </header>
 
       {matches.length === 0 ? (
-        <NoMatches />
+        <NoMatches t={t} />
       ) : (
         <>
           <ul className="mt-8 grid gap-4 lg:grid-cols-2">
             {matches.map((match) => (
-              <MatchCard key={match.scheme_uid} match={match} />
+              <MatchCard
+                key={match.scheme_uid}
+                match={match}
+                t={t}
+                lang={lang}
+              />
             ))}
           </ul>
 
           {result.total_matched > matches.length ? (
             <p className="mt-8 card-quiet p-5 sm:p-6 text-sm text-muted-foreground">
-              Showing the {matches.length} strongest of{" "}
-              {result.total_matched.toLocaleString("en-IN")} matches. Answering
-              one or two more questions is the fastest way to shorten this list —
-              particularly your state and household income.
+              {t("results.showing", {
+                shown: matches.length,
+                total: result.total_matched.toLocaleString(GROUPING),
+              })}
             </p>
           ) : null}
         </>
@@ -161,11 +166,10 @@ export default async function ResultsPage({
       {result.not_matched.length > 0 ? (
         <section className="mt-12">
           <h2 className="font-display text-[1.25rem] font-normal">
-            Ruled out, and why
+            {t("results.ruledOut")}
           </h2>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-            Shown rather than hidden, so you can see the rule that stopped it. If
-            one looks wrong, the answer behind it is probably the thing to change.
+            {t("results.ruledOut.lede")}
           </p>
           <ul className="mt-4 space-y-2">
             {result.not_matched.map((match) => (
@@ -180,7 +184,9 @@ export default async function ResultsPage({
                   {match.name.trim()}
                 </Link>
                 <span className="text-xs text-muted-foreground">
-                  does not match on {match.unmet.join(", ")}
+                  {t("results.notMatchedOn", {
+                    facets: facetList(lang, match.unmet),
+                  })}
                 </span>
               </li>
             ))}
@@ -201,11 +207,12 @@ export default async function ResultsPage({
 function FocusVerdict({
   verdict,
   t,
+  lang,
 }: {
   verdict: SchemeVerdict;
-  t: (key: never, vars?: Record<string, string | number>) => string;
+  t: Translate;
+  lang: Lang;
 }) {
-  const tr = t as unknown as (key: string) => string;
   const blocked = verdict.verdict === "NOT_MATCHED";
 
   return (
@@ -215,7 +222,7 @@ function FocusVerdict({
       }`}
     >
       <p className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-        {tr("results.focus.title")}
+        {t("results.focus.title")}
       </p>
       <h2 className="mt-2 font-display text-[1.5rem] font-normal">
         <Link href={`/schemes/${verdict.slug}?from=check`} className="hover:underline">
@@ -224,28 +231,28 @@ function FocusVerdict({
       </h2>
       <p className={`mt-1 font-medium ${blocked ? "text-clay" : "text-verified"}`}>
         {blocked
-          ? `${tr("results.notMatchedOn")} ${verdict.unmet.join(", ")}`
-          : tr(verdict.verdict === "CHECK" ? "results.strength.check" : "results.strength.likely")}
+          ? t("results.notMatchedOn", { facets: facetList(lang, verdict.unmet) })
+          : t(verdict.verdict === "CHECK" ? "results.strength.check" : "results.strength.likely")}
       </p>
 
       <dl className="mt-4 grid gap-1.5 border-t border-border/60 pt-4 text-sm sm:grid-cols-2">
         {verdict.meets.map((item) => (
           <div key={item} className="flex items-center gap-2">
             <BadgeCheck className="size-4 shrink-0 text-verified" />
-            <dt>{item}</dt>
+            <dt>{facetLabel(lang, item)}</dt>
           </div>
         ))}
         {verdict.unmet.map((item) => (
           <div key={item} className="flex items-center gap-2">
             <AlertCircle className="size-4 shrink-0 text-clay" />
-            <dt className="font-medium text-clay">{item}</dt>
+            <dt className="font-medium text-clay">{facetLabel(lang, item)}</dt>
           </div>
         ))}
         {verdict.unknown.map((item) => (
           <div key={item} className="flex items-center gap-2">
             <HelpCircle className="size-4 shrink-0 text-gold-ink" />
             <dt className="text-muted-foreground">
-              {item} — {tr("results.stillToCheck").toLowerCase()}
+              {facetLabel(lang, item)} — {t("results.stillToCheck.label")}
             </dt>
           </div>
         ))}
@@ -278,7 +285,15 @@ function Tally({
   );
 }
 
-function MatchCard({ match }: { match: DiscoveryMatch }) {
+function MatchCard({
+  match,
+  t,
+  lang,
+}: {
+  match: DiscoveryMatch;
+  t: Translate;
+  lang: Lang;
+}) {
   const strength = STRENGTH[match.strength];
   const Icon = strength.icon;
 
@@ -289,11 +304,11 @@ function MatchCard({ match }: { match: DiscoveryMatch }) {
           className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-semibold ${strength.className}`}
         >
           <Icon className="size-3.5" />
-          {strength.label}
+          {t(strength.label)}
         </span>
         {match.depth === "DEEP" ? (
           <span className="rounded-md bg-primary px-2 py-1 text-[11px] font-bold uppercase tracking-wide text-primary-foreground">
-            Loan · fully checked
+            {t("results.deep")}
           </span>
         ) : null}
         {match.state && match.state !== "All" ? (
@@ -316,42 +331,38 @@ function MatchCard({ match }: { match: DiscoveryMatch }) {
 
       {match.matched_on.length > 0 ? (
         <p className="mt-3 text-xs text-muted-foreground">
-          <span className="font-medium text-foreground">Matched on</span>{" "}
-          {match.matched_on.join(", ")}
+          {t("results.matchedOn", { facets: facetList(lang, match.matched_on) })}
         </p>
       ) : null}
 
       {match.unknown.length > 0 ? (
         <p className="mt-1.5 text-xs text-gold-ink">
-          <span className="font-medium">Still to check</span>{" "}
-          {match.unknown.join(", ")}
+          {t("results.stillToCheck", { facets: facetList(lang, match.unknown) })}
         </p>
       ) : null}
     </li>
   );
 }
 
-function NoMatches() {
+function NoMatches({ t }: { t: Translate }) {
   return (
     <div className="mt-10 rounded-2xl border border-dashed border-input p-12 text-center">
       <h2 className="font-display text-[1.25rem] font-normal">
-        Nothing matched every answer
+        {t("results.empty.h2")}
       </h2>
       <p className="mx-auto mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-        That usually means one answer is narrower than it needs to be — a state
-        with few schemes of its own, or an income figure entered per month rather
-        than per year. Change one answer and the list will almost certainly fill.
+        {t("results.empty.body")}
       </p>
       <div className="mt-6 flex flex-wrap justify-center gap-3">
         <ButtonLink href="/check" className="h-11 rounded-full px-5">
-          Change my answers
+          {t("results.back")}
         </ButtonLink>
         <ButtonLink
           href="/schemes"
           variant="outline"
           className="h-11 bg-card px-5"
         >
-          Browse everything instead
+          {t("results.empty.browse")}
         </ButtonLink>
       </div>
     </div>

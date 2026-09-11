@@ -293,3 +293,50 @@ def catalog_meta(corpus_path: Path = CORPUS_PATH) -> dict:
         "states": states,
         "levels": levels,
     }
+
+
+def translations_for(
+    slugs: list[str], lang: str, corpus_path: Path = CORPUS_PATH,
+) -> dict[str, tuple[str, str]]:
+    """The translated name and brief for a handful of schemes.
+
+    Discovery ranks the whole corpus and then shows about sixty schemes, so the
+    translation lookup belongs here — after the ranking, over the slugs that
+    will actually be rendered — rather than as a join across 4,736 rows that
+    exists to serve 60.
+
+    This is the gap that made a Hindi results page list English scheme names:
+    `/catalog` and `/scheme/{slug}` have taken a `lang` since they were written,
+    `/discover` never did, and `scheme_i18n` has held Hindi names and briefs for
+    4,732 schemes the whole time. Nothing was missing but the query.
+
+    Returns only what it actually has. An empty string in the table means the
+    translation was never fetched, which is different from a scheme whose name
+    is the same in both languages, and the caller must keep the English.
+    """
+    if not slugs or not lang or lang == "en":
+        return {}
+    conn = open_corpus(corpus_path)
+    if conn is None:
+        return {}
+    try:
+        # Chunked: SQLite's default SQLITE_MAX_VARIABLE_NUMBER is 999 and a
+        # caller is free to pass more slugs than that.
+        out: dict[str, tuple[str, str]] = {}
+        for start in range(0, len(slugs), 400):
+            chunk = slugs[start:start + 400]
+            marks = ",".join("?" * len(chunk))
+            for slug, name, brief in conn.execute(
+                f"""SELECT slug, COALESCE(name, ''), COALESCE(brief, '')
+                    FROM scheme_i18n
+                    WHERE lang = ? AND slug IN ({marks})""",
+                [lang, *chunk],
+            ):
+                out[slug] = (name, brief)
+        return out
+    except sqlite3.OperationalError as exc:
+        # An older corpus without scheme_i18n must degrade to English, not 500.
+        logger.warning("Translation lookup failed: %s", exc)
+        return {}
+    finally:
+        conn.close()
