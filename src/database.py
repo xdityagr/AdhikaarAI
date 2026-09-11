@@ -333,6 +333,47 @@ async def set_consent(db: aiosqlite.Connection, user_id: str,
 # User management
 # ---------------------------------------------------------------------------
 
+async def touch_user(db: aiosqlite.Connection, user_id: str,
+                     language: Optional[str] = None) -> None:
+    """Record that we have heard from this number, and in which language.
+
+    The `users` table has existed since the first commit with `get_or_create_user`
+    as its only accessor and NO CALLERS, so it was created empty at every startup
+    and stayed empty. That is fine while every conversation is inbound — and
+    fatal the moment something wants to reach out, because there is no list of
+    numbers to reach and no way to know what language to write in.
+
+    `language` is only written when we actually know it: overwriting a person's
+    remembered Hindi with a default of "en" because one message arrived as a
+    photo would be worse than not updating at all.
+    """
+    now = datetime.now(timezone.utc).isoformat()
+    if language:
+        await db.execute(
+            """INSERT INTO users (user_id, preferred_language, created_at, last_active_at)
+               VALUES (?, ?, ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET
+                 preferred_language=excluded.preferred_language,
+                 last_active_at=excluded.last_active_at""",
+            (user_id, language, now, now),
+        )
+    else:
+        await db.execute(
+            """INSERT INTO users (user_id, preferred_language, created_at, last_active_at)
+               VALUES (?, 'en', ?, ?)
+               ON CONFLICT(user_id) DO UPDATE SET last_active_at=excluded.last_active_at""",
+            (user_id, now, now),
+        )
+    await db.commit()
+
+
+async def known_users(db: aiosqlite.Connection) -> list[tuple[str, str]]:
+    """Every number we have heard from, with its language. For the alert layer."""
+    cursor = await db.execute(
+        "SELECT user_id, preferred_language FROM users ORDER BY last_active_at DESC")
+    return [(row[0], row[1] or "en") for row in await cursor.fetchall()]
+
+
 async def get_or_create_user(db: aiosqlite.Connection, user_id: str) -> dict:
     """Get existing user or create a new one. Returns user dict."""
     cursor = await db.execute(

@@ -296,6 +296,25 @@ class MessageWorker:
                 )
                 return
 
+        # Record that this number exists, and in what language, BEFORE the
+        # reply is composed. The `users` table sat empty since the first commit
+        # because its only accessor had no callers — which is invisible while
+        # every conversation is inbound, and fatal the moment something wants to
+        # reach out: no list of numbers, and no idea what language to write in.
+        #
+        # Failure here must never cost somebody their answer, so it is caught.
+        try:
+            from src.database import get_connection, touch_user
+            from src.whatsapp_brain import language_if_known
+            db = await get_connection()
+            try:
+                await touch_user(db, user_id, language_if_known(user_id))
+            finally:
+                await db.close()
+        except Exception:                                     # noqa: BLE001
+            logger.warning("Could not record user %s", user_id[:10] + "…",
+                           exc_info=True)
+
         # One brain, two channels. The website and WhatsApp answer the same
         # question the same way — the alternative is that the channel reaching
         # the most people stays the worst one.
