@@ -63,6 +63,14 @@ class Settings(BaseSettings):
         default="",
         description="Phone Number ID from the WhatsApp app dashboard (not the number)",
     )
+    job_token: str = Field(
+        default="",
+        description="Shared secret for /api/jobs/*. The caller is a cron "
+                    "service, not a person, so these routes are not behind an "
+                    "operator session — and the alert job is the only route in "
+                    "this API that can cause an outgoing message. Empty means "
+                    "the job refuses to run at all.",
+    )
     whatsapp_business_account_id: str = Field(
         default="",
         description="WABA ID. Not needed to SEND — that is the phone number id "

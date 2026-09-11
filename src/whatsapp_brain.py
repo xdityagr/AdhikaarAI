@@ -355,10 +355,15 @@ async def forget(user_id: str) -> None:
     "we will stop writing but keep what we have"."""
     _LOADED.discard(user_id)
     try:
-        from src.database import get_connection, forget_context
+        from src.database import (forget_alerts, forget_context,
+                                  get_connection)
         db = await get_connection()
         try:
             await forget_context(db, user_id)
+            # What we already pushed at them goes too. Somebody who leaves and
+            # comes back is a new conversation, not one carrying a record of
+            # which schemes we had notified them about.
+            await forget_alerts(db, user_id)
         finally:
             await db.close()
     except Exception:

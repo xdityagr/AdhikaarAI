@@ -19,7 +19,8 @@ from typing import Optional
 
 from dataclasses import asdict
 
-from fastapi import APIRouter, File, Form, HTTPException, UploadFile
+from fastapi import (APIRouter, File, Form, Header, HTTPException, UploadFile,
+                     status)
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
@@ -39,7 +40,9 @@ from src.catalog import (catalog_meta, get_scheme, search_schemes,
 from src.paths import MEDIA_DIR, TILE_DIR
 from src.config import SCHEMES, get_settings
 from src.corpus import load_corpus
-from src import delegation
+import hmac
+
+from src import alerts, delegation
 from src.discovery import Facets, discover_with_credit, evaluate_scheme
 from src.geo import lookup_pin, reverse_geocode
 from src.literacy import (
@@ -961,3 +964,51 @@ async def revoke_case_route(request: RevokeCaseRequest) -> dict:
     """
     await delegation.revoke(request.code)
     return {"ok": True}
+
+
+# ---------------------------------------------------------------------------
+# The alert job
+#
+# Driven by an external cron, matching the keep-alive pattern DEPLOY.md already
+# describes: render.yaml declares one `type: web` service and there is no
+# scheduler.
+#
+# Guarded by a shared secret rather than an operator session, because the caller
+# is a cron service and not a person. It is the only route in this file that is
+# not either anonymous-by-design or behind an operator login, and it is the only
+# one that can cause an outgoing message.
+# ---------------------------------------------------------------------------
+
+class AlertRunRequest(BaseModel):
+    """`since` is an ISO timestamp — schemes first seen after it are candidates.
+
+    Passed in rather than remembered so a run is reproducible and a mistake is
+    recoverable: a job that tracked its own high-water mark internally would,
+    on a bad deploy, either skip a week or re-notify everybody.
+    """
+    since: str
+    #: Defaults to TRUE. The failure mode of getting this wrong is unsolicited
+    #: messages to people who trusted us with a phone number, so sending has to
+    #: be asked for explicitly.
+    dry_run: bool = True
+
+
+@router.post("/jobs/scheme-alerts")
+async def run_scheme_alerts(request: AlertRunRequest,
+                            x_job_token: str = Header(default="")) -> dict:
+    """Tell people about schemes that opened for them since `since`.
+
+    Returns the full breakdown of who was NOT messaged and why, because that
+    is the part worth auditing — see `alerts.Outcome`.
+    """
+    settings = get_settings()
+    expected = getattr(settings, "job_token", "")
+    if not expected:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "JOB_TOKEN is not configured; the alert job cannot be run")
+    if not hmac.compare_digest(x_job_token, expected):
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Bad job token")
+
+    outcome = await alerts.run(request.since, dry_run=request.dry_run)
+    return {"dry_run": request.dry_run, **outcome.as_dict()}

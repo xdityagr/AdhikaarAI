@@ -293,3 +293,106 @@ async def mark_read(message_id: str) -> None:
             )
     except Exception as exc:                                  # noqa: BLE001
         logger.debug("Could not mark %s read: %s", message_id[:12], exc)
+
+
+#: A template Meta has approved for this account, and the one thing that can
+#: open a conversation we did not already have.
+#:
+#: Meta allows free-form text only inside a 24-hour window that opens when the
+#: PERSON messages us. Outside it, `send_text` returns False and logs a
+#: rejection that looks exactly like an expired token — which is why A3's
+#: change alerts could not exist before this function did.
+#:
+#: The template is generic on purpose: it carries no scheme name, no figure and
+#: no name variable. It says there is an update; the person taps a quick-reply
+#: button, which sends a message, which opens the window — and then ordinary
+#: `send_text` carries the actual scheme, computed, in their language, where it
+#: can be explained. See docs/whatsapp-templates.md and
+#: scripts/whatsapp_template.py.
+async def send_template(to: str, name: str, language: str = "en",
+                        body_params: Optional[list[str]] = None) -> bool:
+    """Send an approved template. Returns whether Meta accepted it.
+
+    `language` must be a language the template was approved IN — Meta reviews
+    each one separately, and sending a code that was never submitted fails with
+    a message about the template not existing, which reads as the template
+    having been rejected. The caller is responsible for falling back; see
+    `src/alerts.py`, which asks what was approved rather than assuming.
+    """
+    settings = get_settings()
+    if not is_configured():
+        logger.error("WhatsApp not configured — cannot send to %s", to[:8] + "…")
+        return False
+
+    components = []
+    if body_params:
+        components.append({
+            "type": "body",
+            "parameters": [{"type": "text", "text": str(p)} for p in body_params],
+        })
+
+    payload = {
+        "messaging_product": "whatsapp",
+        "recipient_type": "individual",
+        "to": to,
+        "type": "template",
+        "template": {
+            "name": name,
+            "language": {"code": language},
+            **({"components": components} if components else {}),
+        },
+    }
+
+    url = f"{_base()}/{settings.whatsapp_phone_number_id}/messages"
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.post(
+                url, json=payload,
+                headers={"Authorization": f"Bearer {settings.whatsapp_token}"},
+            )
+    except Exception as exc:                                  # noqa: BLE001
+        logger.warning("Template send failed to %s: %s", to[:8] + "…", exc)
+        return False
+
+    if response.status_code >= 400:
+        logger.warning("Meta rejected template %s/%s (%s): %s",
+                       name, language, response.status_code,
+                       response.text[:400])
+        return False
+    return True
+
+
+async def approved_templates() -> dict[str, set[str]]:
+    """`{template name: {languages approved}}`, from Meta.
+
+    Asked rather than assumed. A template is reviewed per language and they do
+    not land together — at the time of writing `scheme_update` is APPROVED in
+    one language and PENDING in another, and sending the pending one fails in a
+    way that reads like a rejection. Anything not APPROVED is simply absent
+    here, so a caller that iterates this cannot send one by accident.
+    """
+    settings = get_settings()
+    waba = settings.whatsapp_business_account_id
+    if not (waba and settings.whatsapp_token):
+        return {}
+
+    url = f"{_base()}/{waba}/message_templates"
+    try:
+        async with httpx.AsyncClient(timeout=TIMEOUT) as client:
+            response = await client.get(
+                url, params={"limit": 100},
+                headers={"Authorization": f"Bearer {settings.whatsapp_token}"},
+            )
+        if response.status_code >= 400:
+            logger.warning("Could not list templates (%s): %s",
+                           response.status_code, response.text[:300])
+            return {}
+        approved: dict[str, set[str]] = {}
+        for template in response.json().get("data", []):
+            if template.get("status") == "APPROVED":
+                approved.setdefault(template["name"], set()).add(
+                    template["language"])
+        return approved
+    except Exception as exc:                                  # noqa: BLE001
+        logger.warning("Could not list templates: %s", exc)
+        return {}

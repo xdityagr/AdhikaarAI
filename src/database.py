@@ -173,6 +173,21 @@ DDL_STATEMENTS = [
         expires_at TEXT NOT NULL
     )
     """,
+    # Who has already been told about which scheme.
+    #
+    # Idempotency for the alert job, and the reason a corpus re-ingest that
+    # bumps first_seen does not tell four thousand people about the same
+    # scheme a second time. A row is written even in the runs where the
+    # template send is batched, because "told" means the person was notified
+    # about this scheme at all — not that a message was sent per scheme.
+    """
+    CREATE TABLE IF NOT EXISTS alerts_sent (
+        user_id TEXT NOT NULL,
+        scheme_slug TEXT NOT NULL,
+        sent_at TEXT NOT NULL,
+        PRIMARY KEY (user_id, scheme_slug)
+    )
+    """,
     """
     CREATE TABLE IF NOT EXISTS recommendation_cache (
         profile_fingerprint TEXT NOT NULL,
@@ -805,3 +820,31 @@ async def operator_cases(db, operator_id: str,
         (operator_id,),
     )
     return list(await cursor.fetchall())
+
+
+# ---------------------------------------------------------------------------
+# Alerts
+# ---------------------------------------------------------------------------
+
+async def alert_already_sent(db, user_id: str, scheme_slug: str) -> bool:
+    cursor = await db.execute(
+        "SELECT 1 FROM alerts_sent WHERE user_id = ? AND scheme_slug = ?",
+        (user_id, scheme_slug))
+    return await cursor.fetchone() is not None
+
+
+async def record_alert(db, user_id: str, scheme_slug: str, when: str) -> None:
+    """ON CONFLICT DO NOTHING: telling somebody twice is the bug, so a second
+    write is a no-op rather than an error that aborts the run."""
+    await db.execute(
+        """INSERT INTO alerts_sent (user_id, scheme_slug, sent_at)
+           VALUES (?,?,?) ON CONFLICT(user_id, scheme_slug) DO NOTHING""",
+        (user_id, scheme_slug, when))
+    await db.commit()
+
+
+async def forget_alerts(db, user_id: str) -> None:
+    """STOP erases this too. Somebody who left and comes back is a new
+    conversation, not one with a memory of what we already pushed at them."""
+    await db.execute("DELETE FROM alerts_sent WHERE user_id = ?", (user_id,))
+    await db.commit()
