@@ -15,6 +15,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useLanguage } from "@/components/language-provider";
+import {
+  type Application,
+  getServerSnapshot,
+  getSnapshot,
+  save,
+  subscribe,
+} from "@/lib/applications";
 import { cn } from "@/lib/utils";
 
 /**
@@ -62,62 +69,6 @@ const STAGES = [
   },
 ] as const;
 
-interface Application {
-  id: string;
-  scheme: string;
-  reference: string;
-  office: string;
-  appliedAt: string;
-  stageIndex: number;
-}
-
-const STORAGE_KEY = "yojnasetu.applications";
-
-/* ---------------------------------------------------------------------------
- * Applications live in localStorage — we deliberately never receive them — so
- * they are external state. Reading them in an effect and calling setState would
- * render an empty tracker first and fill it a moment later, which reads as
- * "my application is gone" to someone anxiously checking on their money.
- * ------------------------------------------------------------------------- */
-
-const listeners = new Set<() => void>();
-let snapshot: Application[] = [];
-let raw: string | null = null;
-
-function subscribe(listener: () => void): () => void {
-  listeners.add(listener);
-  window.addEventListener("storage", listener);
-  return () => {
-    listeners.delete(listener);
-    window.removeEventListener("storage", listener);
-  };
-}
-
-function getSnapshot(): Application[] {
-  let current: string | null = null;
-  try {
-    current = window.localStorage.getItem(STORAGE_KEY);
-  } catch {
-    current = null;
-  }
-  // The cached array is returned unless the stored text actually changed —
-  // a fresh array every call would loop the store forever.
-  if (current !== raw) {
-    raw = current;
-    try {
-      snapshot = current ? (JSON.parse(current) as Application[]) : [];
-    } catch {
-      snapshot = [];
-    }
-  }
-  return snapshot;
-}
-
-// One frozen array, not a fresh one per call: React compares snapshots by
-// identity, so returning a new [] every time spins forever.
-const NONE: Application[] = [];
-const getServerSnapshot = (): Application[] => NONE;
-
 /* The clock, read the same way as any other external source.
  *
  * "How many days since I applied" depends on today's date, which is not a prop,
@@ -143,16 +94,6 @@ function todaySnapshot(): number {
 
 const todayServerSnapshot = (): number => 0;
 
-function save(next: Application[]): void {
-  try {
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
-  } catch {
-    // Still usable this visit; it just will not be here tomorrow.
-  }
-  raw = null;
-  for (const listener of listeners) listener();
-}
-
 export function ApplicationTracker({ className }: { className?: string }) {
   const applications = useSyncExternalStore(
     subscribe,
@@ -161,10 +102,17 @@ export function ApplicationTracker({ className }: { className?: string }) {
   );
   const [adding, setAdding] = useState(false);
 
-  const add = (application: Omit<Application, "id" | "stageIndex">) => {
+  const add = (application: Omit<Application, "id" | "stageIndex" | "status">) => {
     save([
       ...applications,
-      { ...application, id: crypto.randomUUID(), stageIndex: 0 },
+      {
+        ...application,
+        id: crypto.randomUUID(),
+        stageIndex: 0,
+        // This form asks for a reference number and an office, which you
+        // only have once you have handed the papers in.
+        status: "submitted" as const,
+      },
     ]);
     setAdding(false);
   };
@@ -230,7 +178,7 @@ function AddForm({
   onAdd,
   onCancel,
 }: {
-  onAdd: (application: Omit<Application, "id" | "stageIndex">) => void;
+  onAdd: (application: Omit<Application, "id" | "stageIndex" | "status">) => void;
   onCancel: () => void;
 }) {
   const [scheme, setScheme] = useState("");
@@ -342,9 +290,13 @@ function ApplicationCard({
   const today = useSyncExternalStore(
     subscribeToday, todaySnapshot, todayServerSnapshot,
   );
-  const daysSince = today
-    ? Math.max(0, Math.floor((today - Date.parse(application.appliedAt)) / 86_400_000))
-    : 0;
+  // `appliedAt` is absent on an application that has not been handed in yet.
+  // This card only renders submitted ones, but the type allows it and a NaN
+  // here would print "NaN days ago" to somebody chasing their money.
+  const daysSince =
+    today && application.appliedAt
+      ? Math.max(0, Math.floor((today - Date.parse(application.appliedAt)) / 86_400_000))
+      : 0;
 
   // Overdue is measured against the stage the applicant should have reached by
   // now, not the one they are on — that is the gap worth escalating.

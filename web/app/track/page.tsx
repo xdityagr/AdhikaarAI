@@ -1,4 +1,5 @@
 import { ApplicationTracker } from "@/components/application-tracker";
+import { PreparingList } from "@/components/preparing-list";
 import { PageHeader } from "@/components/page-header";
 import { getT } from "@/lib/i18n/server";
 
@@ -33,6 +34,7 @@ export default async function TrackPage() {
           </p>
         </aside>
 
+        <PreparingList />
         <ApplicationTracker className="mt-14" />
       </div>
     </div>

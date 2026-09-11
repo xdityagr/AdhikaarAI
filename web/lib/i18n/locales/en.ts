@@ -373,4 +373,17 @@ export const en = {
   "apply.official": "Official scheme page",
   "apply.notSubmitted": "This form has not been sent anywhere. Take it to the office or type it into the official portal yourself.",
   "apply.open": "Open the filled form",
+  "apply.save.title": "Keep this one",
+  "apply.save.body": "Save it to your applications so you can come back and finish, and see which papers you still need.",
+  "apply.save.cta": "Save this application",
+  "apply.saved.title": "Saved to your applications",
+  "apply.saved.body": "You can come back to this from Track at any time. Your ticked papers are remembered here on this phone.",
+  "apply.save.remove": "Remove",
+  "apply.save.viewAll": "See all my applications",
+  "track.preparing.title": "Still getting ready",
+  "track.preparing.lede": "The schemes you have saved but not yet handed in. Gathering a certificate takes weeks, so this remembers where you were.",
+  "track.preparing.papers": "{count} paper(s) ticked off",
+  "track.preparing.noPapers": "No papers ticked yet",
+  "track.preparing.continue": "Continue this application",
+  "track.preparing.remove": "Remove from my applications"
 } as const;
