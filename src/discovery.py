@@ -327,9 +327,30 @@ def _check_income(row: sqlite3.Row, income: Optional[float],
     return True
 
 
+#: myScheme spells "no upper limit" as 100 and "no lower limit" as 0, so a band
+#: of 0–100 is not a band at all. 327 schemes carry exactly that.
+_AGE_FLOOR = 0
+_AGE_CEILING = 100
+
+
+def _age_restricts(low: Optional[int], high: Optional[int]) -> bool:
+    """Whether this scheme actually limits anyone by age."""
+    if low is None and high is None:
+        return False
+    return (low is not None and low > _AGE_FLOOR) or \
+           (high is not None and high < _AGE_CEILING)
+
+
 def _check_age(row: sqlite3.Row, age: Optional[int], match: DiscoveryMatch) -> bool:
     low, high = row["age_min"], row["age_max"]
-    if low is None and high is None:
+    # A scheme open to every age must not claim an age match. It inflates the
+    # relevance score against schemes that genuinely target this person, and it
+    # tells someone "you matched on age" about a rule the scheme never wrote —
+    # which is the same lie as excluding them on a criterion nobody published.
+    # It surfaced when the interview started asking for an age: a 65-year-old
+    # widow looking for a pension was shown post-matric scholarships first,
+    # every one of them "matched on age" with a band of 0 to 100.
+    if not _age_restricts(low, high):
         return True
     if age is None:
         match.unknown.append("age")

@@ -230,6 +230,111 @@ STRINGS: dict[str, dict[str, str]] = {
         "ta": "கடைசி கேள்வி — நீங்கள் எங்கு இருக்கிறீர்கள்? அருகிலுள்ள அலுவலகங்களைத் தேடுகிறேன்.",
     },
 
+    # ---- the adaptive interview ----
+    #
+    # Which of these gets asked, and in what order, is decided at runtime by
+    # `src.interview` against the schemes still in play — so these are written to
+    # stand alone. None may assume a previous question was asked, because for
+    # most people it was not.
+    "ask_occupation": {
+        "en": "What work do you do? It decides more schemes than anything else you can tell me.",
+        "hi": "आप क्या काम करते हैं? सबसे ज़्यादा योजनाएँ इसी से तय होती हैं।",
+        "mr": "तुम्ही काय काम करता? सर्वात जास्त योजना याच उत्तरावर ठरतात.",
+        "bn": "আপনি কী কাজ করেন? সবচেয়ে বেশি প্রকল্প এর উপরেই নির্ভর করে।",
+        "ta": "நீங்கள் என்ன வேலை செய்கிறீர்கள்? மிக அதிகத் திட்டங்கள் இதைப் பொறுத்தே முடிவாகும்.",
+    },
+    "ask_age": {
+        "en": "How old are you?",
+        "hi": "आपकी उम्र क्या है?",
+        "mr": "तुमचे वय किती आहे?",
+        "bn": "আপনার বয়স কত?",
+        "ta": "உங்கள் வயது என்ன?",
+    },
+    "ask_gender": {
+        "en": "Who is this for?",
+        "hi": "यह किसके लिए है?",
+        "mr": "हे कोणासाठी आहे?",
+        "bn": "এটি কার জন্য?",
+        "ta": "இது யாருக்காக?",
+    },
+    "ask_caste": {
+        "en": "Which community do you belong to? Many schemes are reserved, and this is the only way to see them.",
+        "hi": "आप किस समुदाय से हैं? कई योजनाएँ आरक्षित हैं, और उन्हें देखने का यही एक रास्ता है।",
+        "mr": "तुम्ही कोणत्या समाजाचे आहात? अनेक योजना राखीव आहेत, आणि त्या पाहण्याचा हाच मार्ग आहे.",
+        "bn": "আপনি কোন সম্প্রদায়ভুক্ত? অনেক প্রকল্প সংরক্ষিত, আর সেগুলি দেখার এটিই একমাত্র উপায়।",
+        "ta": "நீங்கள் எந்தச் சமூகத்தைச் சேர்ந்தவர்? பல திட்டங்கள் ஒதுக்கப்பட்டவை; அவற்றைக் காண இதுவே வழி.",
+    },
+    "ask_employment": {
+        "en": "Are you working at the moment?",
+        "hi": "क्या आप अभी काम कर रहे हैं?",
+        "mr": "तुम्ही सध्या काम करत आहात का?",
+        "bn": "আপনি কি এখন কাজ করছেন?",
+        "ta": "நீங்கள் தற்போது வேலை செய்கிறீர்களா?",
+    },
+    "ask_student": {
+        "en": "Are you studying right now?",
+        "hi": "क्या आप अभी पढ़ाई कर रहे हैं?",
+        "mr": "तुम्ही सध्या शिकत आहात का?",
+        "bn": "আপনি কি এখন পড়াশোনা করছেন?",
+        "ta": "நீங்கள் இப்போது படிக்கிறீர்களா?",
+    },
+    "ask_disability": {
+        "en": "Do you have a disability certificate?",
+        "hi": "क्या आपके पास दिव्यांगता प्रमाणपत्र है?",
+        "mr": "तुमच्याकडे दिव्यांग प्रमाणपत्र आहे का?",
+        "bn": "আপনার কি প্রতিবন্ধী শংসাপত্র আছে?",
+        "ta": "உங்களிடம் மாற்றுத்திறனாளி சான்றிதழ் உள்ளதா?",
+    },
+    "ask_marital": {
+        "en": "Are you married?",
+        "hi": "क्या आप विवाहित हैं?",
+        "mr": "तुम्ही विवाहित आहात का?",
+        "bn": "আপনি কি বিবাহিত?",
+        "ta": "நீங்கள் திருமணமானவரா?",
+    },
+    "ask_residence": {
+        "en": "Do you live in a village, or a town or city?",
+        "hi": "आप गाँव में रहते हैं या शहर में?",
+        "mr": "तुम्ही गावात राहता की शहरात?",
+        "bn": "আপনি গ্রামে থাকেন না শহরে?",
+        "ta": "நீங்கள் கிராமத்தில் வசிக்கிறீர்களா, நகரத்திலா?",
+    },
+    "ask_bpl": {
+        "en": "Do you have a BPL ration card?",
+        "hi": "क्या आपके पास बीपीएल राशन कार्ड है?",
+        "mr": "तुमच्याकडे बीपीएल रेशन कार्ड आहे का?",
+        "bn": "আপনার কি বিপিএল রেশন কার্ড আছে?",
+        "ta": "உங்களிடம் BPL ரேஷன் அட்டை உள்ளதா?",
+    },
+    "ask_minority": {
+        "en": "Do you belong to a minority community?",
+        "hi": "क्या आप अल्पसंख्यक समुदाय से हैं?",
+        "mr": "तुम्ही अल्पसंख्याक समाजाचे आहात का?",
+        "bn": "আপনি কি সংখ্যালঘু সম্প্রদায়ভুক্ত?",
+        "ta": "நீங்கள் சிறுபான்மைச் சமூகத்தைச் சேர்ந்தவரா?",
+    },
+    "ask_income": {
+        "en": "Roughly what does your whole household earn in a year? An estimate is fine.",
+        "hi": "आपके पूरे परिवार की साल भर की आमदनी लगभग कितनी है? अंदाज़ा ही काफ़ी है।",
+        "mr": "तुमच्या संपूर्ण कुटुंबाचे वर्षाचे उत्पन्न साधारण किती? अंदाज पुरेसा आहे.",
+        "bn": "আপনার গোটা পরিবারের বছরে আয় আনুমানিক কত? আন্দাজই যথেষ্ট।",
+        "ta": "உங்கள் குடும்பத்தின் ஆண்டு வருமானம் தோராயமாக எவ்வளவு? மதிப்பீடே போதும்.",
+    },
+
+    # Offered on every adaptive question. Declining costs precision and never a
+    # scheme, and the label has to say so or nobody dares skip the awkward ones.
+    "opt_skip": {
+        "en": "Skip — it won't hide anything",
+        "hi": "छोड़ दें — इससे कुछ छिपेगा नहीं",
+        "mr": "वगळा — यामुळे काहीही लपणार नाही",
+        "bn": "বাদ দিন — কিছুই লুকোবে না",
+        "ta": "தவிர் — இதனால் எதுவும் மறைக்கப்படாது",
+    },
+    "opt_yes": {"en": "Yes", "hi": "हाँ", "mr": "होय", "bn": "হ্যাঁ", "ta": "ஆம்"},
+    "opt_no": {"en": "No", "hi": "नहीं", "mr": "नाही", "bn": "না", "ta": "இல்லை"},
+    "opt_rural": {"en": "A village", "hi": "गाँव", "mr": "गाव", "bn": "গ্রাম", "ta": "கிராமம்"},
+    "opt_urban": {"en": "A town or city", "hi": "शहर", "mr": "शहर", "bn": "শহর", "ta": "நகரம்"},
+
     # ---- results ----
     "checking": {
         "en": "Checking every scheme against what you told me…",

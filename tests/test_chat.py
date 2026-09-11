@@ -95,6 +95,39 @@ class TestLanguage:
 # The conversation
 # ---------------------------------------------------------------------------
 
+async def drive(opening: dict, answers: dict, max_turns: int = 25) -> dict:
+    """Answer whatever is asked until the conversation ends.
+
+    The questions between the prefix and `place` are now chosen by
+    `src.interview` against the schemes still in play, so a test cannot script
+    the sequence — and should not want to: the sequence is the thing that is
+    allowed to change. Supply answers for the steps a test actually cares about
+    and everything else is skipped, which by construction hides no scheme.
+
+    Raises rather than returning a half-finished conversation, so a stuck
+    interview fails loudly instead of as a confusing assertion two lines later.
+    """
+    result = opening
+    session_id = result["session_id"]
+    for _ in range(max_turns):
+        if result["done"]:
+            return result
+        step = result["step"]
+        reply = answers.get(step)
+        if reply is None and step.startswith("q:"):
+            reply = answers.get(step[2:], "__skip__")
+        if reply is None:
+            reply = result["chips"][0]["value"] if result["chips"] else "__skip__"
+        result = await turn(session_id, reply)
+    raise AssertionError(f"conversation did not finish; stuck at {result['step']}")
+
+
+#: The credit path's required answers, keyed by step. Everything the interview
+#: chooses to ask on top of these gets skipped.
+CREDIT_RUN = {"need": "business", "cost": "120000", "income": "280000",
+              "category": "SC", "gender": "female", "place": "ballia"}
+
+
 class TestConversation:
     @pytest.mark.asyncio
     async def test_opens_with_a_greeting_and_options(self):
@@ -123,22 +156,22 @@ class TestConversation:
     @pytest.mark.asyncio
     async def test_welfare_need_never_asks_about_project_cost(self):
         """Someone wanting a pension is never asked what their project costs."""
-        r = await turn(None)
-        sid = r["session_id"]
-        asked = []
-        for message in ["pension", "SC", "ballia"]:
-            r = await turn(sid, message)
-            asked.append(r["step"])
-        assert "cost" not in asked and "income" not in asked
-        assert r["done"] is True
-        assert any(c["kind"] == "matches" for c in r["cards"])
+        opening = await turn(None)
+        sid = opening["session_id"]
+        seen, result = [], opening
+        for _ in range(25):
+            if result["done"]:
+                break
+            seen.append(result["step"])
+            reply = {"need": "pension", "place": "ballia"}.get(result["step"], "__skip__")
+            result = await turn(sid, reply)
+        assert "cost" not in seen and "income" not in seen
+        assert result["done"] is True
+        assert any(c["kind"] == "matches" for c in result["cards"])
 
     @pytest.mark.asyncio
     async def test_credit_need_still_reaches_the_loan_engine(self):
-        r = await turn(None)
-        sid = r["session_id"]
-        for message in ["business", "120000", "280000", "SC", "female", "ballia"]:
-            r = await turn(sid, message)
+        r = await drive(await turn(None), CREDIT_RUN)
         assert r["done"] is True
         assert [c["kind"] for c in r["cards"]].count("scheme") == 3
 
@@ -151,12 +184,15 @@ class TestConversation:
 
     @pytest.mark.asyncio
     async def test_every_step_offers_chips(self):
-        r = await turn(None)
-        sid = r["session_id"]
-        for message in ["business", "120000", "280000", "SC", "female"]:
-            r = await turn(sid, message)
-            if not r["done"]:
-                assert r["chips"], f"step {r['step']} left the user with no options"
+        opening = await turn(None)
+        sid = opening["session_id"]
+        result = opening
+        for _ in range(25):
+            if result["done"]:
+                break
+            assert result["chips"], f"step {result['step']} left the user with no options"
+            reply = CREDIT_RUN.get(result["step"], "__skip__")
+            result = await turn(sid, reply)
 
     @pytest.mark.asyncio
     async def test_unparseable_answer_re_asks_with_options(self):
@@ -170,10 +206,7 @@ class TestConversation:
 
     @pytest.mark.asyncio
     async def test_full_run_produces_cards(self):
-        r = await turn(None)
-        sid = r["session_id"]
-        for message in ["business", "120000", "280000", "SC", "female", "ballia"]:
-            r = await turn(sid, message)
+        r = await drive(await turn(None), CREDIT_RUN)
         assert r["done"] is True
         kinds = [c["kind"] for c in r["cards"]]
         assert kinds.count("scheme") == 3
@@ -183,10 +216,7 @@ class TestConversation:
 
     @pytest.mark.asyncio
     async def test_cheapest_scheme_is_first_and_badged(self):
-        r = await turn(None)
-        sid = r["session_id"]
-        for m in ["business", "120000", "280000", "SC", "female", "ballia"]:
-            r = await turn(sid, m)
+        r = await drive(await turn(None), CREDIT_RUN)
         schemes = [c for c in r["cards"] if c["kind"] == "scheme"]
         assert schemes[0]["best"] is True
         assert schemes[0]["name"] == "Micro Finance Scheme"
@@ -194,10 +224,8 @@ class TestConversation:
 
     @pytest.mark.asyncio
     async def test_out_of_category_gets_a_referral_not_a_wall(self):
-        r = await turn(None)
-        sid = r["session_id"]
-        for m in ["business", "120000", "280000", "OBC", "male", "ballia"]:
-            r = await turn(sid, m)
+        r = await drive(await turn(None),
+                        {**CREDIT_RUN, "category": "OBC", "gender": "male"})
         assert r["done"] is True
         notices = [c for c in r["cards"] if c["kind"] == "notice"]
         assert any("NBCFDC" in c["body"] for c in notices)
@@ -221,10 +249,7 @@ class TestConversation:
     @pytest.mark.asyncio
     async def test_places_are_all_routable(self):
         for place in PLACES:
-            r = await turn(None)
-            sid = r["session_id"]
-            for m in ["business", "120000", "280000", "SC", "female", place["id"]]:
-                r = await turn(sid, m)
+            r = await drive(await turn(None), {**CREDIT_RUN, "place": place["id"]})
             assert r["done"] is True, f"{place['id']} did not complete"
 
 
