@@ -7,7 +7,11 @@ import { useLanguage } from "@/components/language-provider";
 import { announcePlace } from "@/components/language-suggestion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PLACE_COOKIE, PLACE_ASKED_COOKIE } from "@/lib/i18n/config";
+import {
+  PLACE_COOKIE,
+  PLACE_ASKED_COOKIE,
+  LEGACY_PLACE_ASKED_COOKIE,
+} from "@/lib/i18n/config";
 import { cn } from "@/lib/utils";
 
 /**
@@ -36,10 +40,21 @@ export function LocationGate({ states }: { states: string[] }) {
   const [note, setNote] = useState<string | null>(null);
   const [pin, setPin] = useState("");
   useEffect(() => {
+    // Clear the year-long dismissal the old build wrote. Without this, anyone
+    // who ever tapped "skip" would keep being not-asked until 2027, which is
+    // the bug rather than the fix.
+    document.cookie = `${LEGACY_PLACE_ASKED_COOKIE}=; path=/; max-age=0; samesite=lax`;
+
     const cookies = document.cookie;
-    if (cookies.includes(`${PLACE_ASKED_COOKIE}=1`) || cookies.includes(`${PLACE_COOKIE}=`)) {
-      return;
-    }
+    // Knowing the state is the end of it — never ask again.
+    if (cookies.includes(`${PLACE_COOKIE}=`)) return;
+    // Not knowing it, but having asked already, is NOT the end of it. The
+    // dismissal cookie is session-scoped (see `close`), so a skip quiets this
+    // for the rest of the visit and the next visit asks again. Making it
+    // permanent meant one mis-tap left the product without the single most
+    // consequential thing it can know about somebody — most schemes are run by
+    // one state — with no prompt ever offered again.
+    if (cookies.includes(`${PLACE_ASKED_COOKIE}=1`)) return;
     // A beat before appearing, so the page paints first and the person can see
     // what they have arrived at before being asked anything.
     //
@@ -63,7 +78,9 @@ export function LocationGate({ states }: { states: string[] }) {
   const close = useCallback((remember = true) => {
     setOpen(false);
     if (remember) {
-      document.cookie = `${PLACE_ASKED_COOKIE}=1; path=/; max-age=31536000; samesite=lax`;
+      // No max-age: a session cookie. Quiet for this visit, asked again on the
+      // next one — for as long as we still do not know where they are.
+      document.cookie = `${PLACE_ASKED_COOKIE}=1; path=/; samesite=lax`;
     }
   }, []);
 
@@ -80,7 +97,15 @@ export function LocationGate({ states }: { states: string[] }) {
   );
 
   const useMyLocation = () => {
-    if (!window.isSecureContext || !("geolocation" in navigator)) {
+    if (!("geolocation" in navigator)) {
+      setNote(t("check.location.unavailable"));
+      return;
+    }
+    // Browsers only offer location on a secure origin. localhost counts as one;
+    // a LAN address like 192.168.1.5:3100 does not — which is exactly how this
+    // gets opened from a phone during testing, and the button then does nothing
+    // with no explanation at all.
+    if (!window.isSecureContext) {
       setNote(t("check.location.insecure"));
       return;
     }
@@ -103,11 +128,24 @@ export function LocationGate({ states }: { states: string[] }) {
           setBusy(false);
         }
       },
-      () => {
+      (error) => {
         setBusy(false);
-        setNote(t("check.location.denied"));
+        // Three very different failures used to share one message. "Location
+        // was not shared" told someone whose browser had simply timed out that
+        // they had refused, and told someone who HAD refused nothing about
+        // where to change it — so neither could act, and both concluded the
+        // button was broken.
+        if (error.code === error.PERMISSION_DENIED) {
+          setNote(t("check.location.blocked"));
+        } else if (error.code === error.TIMEOUT) {
+          setNote(t("check.location.timeout"));
+        } else {
+          setNote(t("check.location.unavailable"));
+        }
       },
-      { timeout: 10000, maximumAge: 300000 },
+      // 20s, and a fix up to five minutes old is fine. The old 10s reported a
+      // timeout as a refusal on exactly the slow devices this is built for.
+      { timeout: 20000, maximumAge: 300000, enableHighAccuracy: false },
     );
   };
 
@@ -184,19 +222,40 @@ export function LocationGate({ states }: { states: string[] }) {
             <span className="h-px flex-1 bg-border" />
           </div>
 
-          <Input
-            inputMode="numeric"
-            maxLength={6}
-            value={pin}
-            placeholder={t("location.pin.placeholder")}
-            aria-label={t("check.location.pin")}
-            className="h-11 bg-paper text-base"
-            onChange={(event) => {
-              const value = event.target.value.replace(/\D/g, "").slice(0, 6);
-              setPin(value);
-              if (value.length === 6) void lookupPin(value);
+          {/* A form, so Enter submits — on a phone keyboard the "go" key is
+              what a person reaches for, and the six-digit auto-fire alone left
+              anyone who paused mid-number with no way to ask. The auto-fire is
+              kept because it usually saves the tap. */}
+          <form
+            className="flex gap-2"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (pin.length === 6) void lookupPin(pin);
             }}
-          />
+          >
+            <Input
+              inputMode="numeric"
+              maxLength={6}
+              value={pin}
+              disabled={busy}
+              placeholder={t("location.pin.placeholder")}
+              aria-label={t("check.location.pin")}
+              className="h-11 flex-1 bg-paper text-base"
+              onChange={(event) => {
+                const value = event.target.value.replace(/\D/g, "").slice(0, 6);
+                setPin(value);
+                if (value.length === 6) void lookupPin(value);
+              }}
+            />
+            <Button
+              type="submit"
+              variant="outline"
+              className="h-11 px-4"
+              disabled={busy || pin.length !== 6}
+            >
+              {busy ? <Loader2 className="size-4 animate-spin" /> : t("check.location.find")}
+            </Button>
+          </form>
 
           <select
             aria-label={t("check.location.state")}

@@ -3,6 +3,7 @@ import Link from "next/link";
 import { AadhaarPanel, DocumentReadiness } from "@/components/document-readiness";
 import { PageHeader } from "@/components/page-header";
 import { getScheme } from "@/lib/api";
+import { splitRequirements } from "@/lib/documents";
 import { getT } from "@/lib/i18n/server";
 
 export async function generateMetadata() {
@@ -77,21 +78,3 @@ export default async function DocumentsPage({
   );
 }
 
-/** Mirror of `parse_list` in src/application.py. */
-function splitRequirements(markdown?: string | null): string[] {
-  if (!markdown) return [];
-  const out: string[] = [];
-  for (const raw of markdown.split("\n")) {
-    const line = raw.trim();
-    if (!line) continue;
-    const text = line
-      .replace(/^\s*(?:[-*•]|\d+[.)])\s+/, "")
-      .replace(/\*\*(.+?)\*\*/g, "$1")
-      .replace(/\[([^\]]+)\]\(([^)]+)\)/g, "$1 ($2)")
-      .replace(/^#{1,6}\s*/, "")
-      .trim();
-    if (text.length > 2) out.push(text);
-    if (out.length >= 24) break;
-  }
-  return out;
-}

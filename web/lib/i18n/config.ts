@@ -53,7 +53,14 @@ export const LANG_PROMPT_COOKIE = "yojnasetu_lang_asked";
 /** The state we learned, remembered so we ask once and pre-fill everywhere. */
 export const PLACE_COOKIE = "yojnasetu_state";
 /** Set when the location question has been answered or skipped. */
-export const PLACE_ASKED_COOKIE = "yojnasetu_state_asked";
+// Renamed deliberately. The previous name was written with a one-year max-age,
+// so every browser that had ever dismissed the prompt carried a cookie that
+// suppressed it until 2027 — including for people the product still knew
+// nothing about. Changing the meaning of a cookie without changing its name
+// would have left exactly those users un-fixed, which is the group the fix was
+// for. The old one is expired on sight in `location-gate.tsx`.
+export const PLACE_ASKED_COOKIE = "yojnasetu_loc_asked";
+export const LEGACY_PLACE_ASKED_COOKIE = "yojnasetu_state_asked";
 
 export const DEFAULT_LANG: Lang = "en";
 
