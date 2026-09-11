@@ -17,6 +17,7 @@ import aiosqlite
 import logging
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 from src.config import get_settings
 
@@ -50,6 +51,20 @@ DDL_STATEMENTS = [
         user_id TEXT PRIMARY KEY,
         opted_out INTEGER NOT NULL DEFAULT 0,
         updated_at TEXT NOT NULL
+    )
+    """,
+    # A conversation parked on the website, waiting to be picked up on WhatsApp.
+    #
+    # `created_at` is wall-clock rather than the monotonic clock the in-memory
+    # version used. Monotonic is the right choice for a process — immune to the
+    # clock being adjusted — and the wrong one for a row, because it resets to
+    # zero on restart and every stored handoff would read as brand new.
+    """
+    CREATE TABLE IF NOT EXISTS handoff (
+        code TEXT PRIMARY KEY,
+        context TEXT NOT NULL,
+        history TEXT NOT NULL,
+        created_at TEXT NOT NULL
     )
     """,
     """
@@ -243,6 +258,46 @@ async def mark_message_processed(db: aiosqlite.Connection, message_id: str) -> N
         (message_id, now),
     )
     await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Handoff — web to WhatsApp
+# ---------------------------------------------------------------------------
+
+async def put_handoff(db: aiosqlite.Connection, code: str, context: str,
+                      history: str) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        "INSERT OR REPLACE INTO handoff (code, context, history, created_at) "
+        "VALUES (?, ?, ?, ?)",
+        (code, context, history, now),
+    )
+    await db.commit()
+
+
+async def take_handoff(db: aiosqlite.Connection, code: str) -> Optional[tuple]:
+    """Redeem a code, once, atomically.
+
+    DELETE ... RETURNING rather than SELECT-then-DELETE: two people racing the
+    same code — the same link forwarded twice, or a message redelivered by Meta
+    — must not both be handed the payload. One statement, one winner, and it
+    ports to Postgres unchanged.
+    """
+    cursor = await db.execute(
+        "DELETE FROM handoff WHERE code = ? RETURNING context, history, created_at",
+        (code,),
+    )
+    row = await cursor.fetchone()
+    await db.commit()
+    return tuple(row) if row else None
+
+
+async def sweep_handoffs(db: aiosqlite.Connection, older_than: str) -> int:
+    """Drop handoffs past their TTL. Returns how many went."""
+    cursor = await db.execute(
+        "DELETE FROM handoff WHERE created_at < ?", (older_than,))
+    await db.commit()
+    return cursor.rowcount or 0
 
 
 # ---------------------------------------------------------------------------

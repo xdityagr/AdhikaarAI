@@ -811,7 +811,7 @@ async def create_handoff(request: HandoffRequest) -> dict:
     session — so the code travels inside the prefilled message and is redeemed
     by the first thing the person sends.
     """
-    code = handoff.create(request.context, request.history)
+    code = await handoff.create(request.context, request.history)
     return {"code": code, "expires_in": handoff.TTL_SECONDS}
 
 

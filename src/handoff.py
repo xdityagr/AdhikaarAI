@@ -30,8 +30,10 @@ phone keyboard, and a code that cannot be transcribed is worse than no code.
 from __future__ import annotations
 
 import logging
+import json
 import secrets
 import time
+from datetime import datetime, timedelta, timezone
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -43,11 +45,14 @@ PREFIX = "YS"
 
 TTL_SECONDS = 30 * 60
 
-# In memory on purpose, and flagged the same way the consent list is: it is
-# small, it is short-lived, and losing it on restart costs someone one repeated
-# question rather than their application. It still needs a table before this
-# takes real traffic, because a restart mid-handoff strands whoever was
-# crossing at that moment.
+# In a table now. It used to be this dict alone, with a note saying it needed
+# one "because a restart mid-handoff strands whoever was crossing at that
+# moment" — which is a person who answered six questions on the website, tapped
+# through to WhatsApp, and arrives to be asked their state again.
+#
+# The dict survives as a same-process fast path and as the fallback when the
+# database is unreachable: a handoff that works until the next restart is worth
+# more than one that fails now.
 _PENDING: dict[str, "Handoff"] = {}
 
 
@@ -62,22 +67,49 @@ def _expired(entry: "Handoff") -> bool:
     return (time.monotonic() - entry.created) > TTL_SECONDS
 
 
+def _cutoff_iso() -> str:
+    """The wall-clock instant before which a stored handoff is stale.
+
+    Rows carry wall-clock time because the monotonic clock the in-memory path
+    uses resets to zero on restart — every stored handoff would read as brand
+    new, and a code from last week would still redeem.
+    """
+    return (datetime.now(timezone.utc)
+            - timedelta(seconds=TTL_SECONDS)).isoformat()
+
+
 def _sweep() -> None:
     for code in [c for c, e in _PENDING.items() if _expired(e)]:
         _PENDING.pop(code, None)
 
 
-def create(context: Optional[dict] = None,
-           history: Optional[list[dict]] = None) -> str:
+async def create(context: Optional[dict] = None,
+                 history: Optional[list[dict]] = None) -> str:
     """Park a conversation and return the code that redeems it."""
     _sweep()
     code = PREFIX + "-" + "".join(secrets.choice(ALPHABET) for _ in range(LENGTH))
-    _PENDING[code] = Handoff(
+    entry = Handoff(
         context=dict(context or {}),
         # Only the last few turns. The point is continuity, not a transcript,
         # and a long history in a prompt costs more than it is worth here.
         history=list(history or [])[-6:],
     )
+    _PENDING[code] = entry
+
+    try:
+        from src.database import get_connection, put_handoff, sweep_handoffs
+        db = await get_connection()
+        try:
+            await put_handoff(db, code, json.dumps(entry.context),
+                              json.dumps(entry.history))
+            await sweep_handoffs(db, _cutoff_iso())
+        finally:
+            await db.close()
+    except Exception:
+        # The in-memory copy still works for this process. A handoff that
+        # survives until the next restart beats one that fails right now.
+        logger.exception("Could not persist handoff %s", code)
+
     logger.info("Handoff %s created (%d pending)", code, len(_PENDING))
     return code
 
@@ -103,15 +135,39 @@ def find(text: str) -> Optional[str]:
     return candidate
 
 
-def claim(code: str) -> Optional[Handoff]:
-    """Redeem a code, once. Returns None if unknown, used or stale."""
+async def claim(code: str) -> Optional[Handoff]:
+    """Redeem a code, once. Returns None if unknown, used or stale.
+
+    The database is consulted FIRST, and its DELETE ... RETURNING is what makes
+    "once" true across processes. Checking memory first would let two workers
+    both serve the same code, since each has its own dict.
+    """
     _sweep()
+    try:
+        from src.database import get_connection, take_handoff
+        db = await get_connection()
+        try:
+            row = await take_handoff(db, code)
+        finally:
+            await db.close()
+    except Exception:
+        logger.exception("Could not read handoff %s", code)
+        row = None
+
+    if row is not None:
+        context_json, history_json, created_at = row
+        _PENDING.pop(code, None)          # this process's copy is spent too
+        if created_at < _cutoff_iso():
+            return None
+        logger.info("Handoff %s claimed", code)
+        return Handoff(context=json.loads(context_json or "{}"),
+                       history=json.loads(history_json or "[]"))
+
+    # Nothing stored — either the write failed earlier or the database is down.
     entry = _PENDING.pop(code, None)
-    if entry is None:
+    if entry is None or _expired(entry):
         return None
-    if _expired(entry):
-        return None
-    logger.info("Handoff %s claimed", code)
+    logger.info("Handoff %s claimed from memory", code)
     return entry
 
 

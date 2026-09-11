@@ -129,49 +129,96 @@ class TestParsing:
 
 
 class TestHandoff:
-    def test_a_code_carries_the_context(self):
-        code = handoff.create({"state": "Bihar"}, [{"role": "user", "text": "hi"}])
-        entry = handoff.claim(code)
+    async def test_a_code_carries_the_context(self):
+        code = await handoff.create({"state": "Bihar"}, [{"role": "user", "text": "hi"}])
+        entry = await handoff.claim(code)
         assert entry.context["state"] == "Bihar"
         assert entry.history[0]["text"] == "hi"
 
-    def test_a_code_works_exactly_once(self):
+    async def test_a_code_works_exactly_once(self):
         """It travels in a message anyone can forward."""
-        code = handoff.create({"state": "Bihar"})
-        assert handoff.claim(code) is not None
-        assert handoff.claim(code) is None
+        code = await handoff.create({"state": "Bihar"})
+        assert await handoff.claim(code) is not None
+        assert await handoff.claim(code) is None
 
-    def test_an_unknown_code_is_refused_quietly(self):
-        assert handoff.claim("YS-ZZZZZZ") is None
+    async def test_an_unknown_code_is_refused_quietly(self):
+        assert await handoff.claim("YS-ZZZZZZ") is None
 
-    def test_it_is_found_inside_a_real_message(self):
-        code = handoff.create({})
+    async def test_it_is_found_inside_a_real_message(self):
+        code = await handoff.create({})
         message = f"Namaste, carrying on from the website. {code}"
         assert handoff.find(message) == code
 
-    def test_it_is_found_when_the_keyboard_changed_the_case(self):
-        code = handoff.create({})
+    async def test_it_is_found_when_the_keyboard_changed_the_case(self):
+        code = await handoff.create({})
         assert handoff.find(code.lower()) == code
 
-    def test_a_message_with_no_code_finds_nothing(self):
+    async def test_a_message_with_no_code_finds_nothing(self):
         assert handoff.find("I need a loan for a sewing machine") is None
         assert handoff.find("") is None
 
-    def test_the_code_is_stripped_before_the_model_sees_it(self):
+    async def test_the_code_is_stripped_before_the_model_sees_it(self):
         """"YS-4H7K I need help with the loan" is a question about the loan;
         the code is plumbing."""
-        code = handoff.create({})
+        code = await handoff.create({})
         cleaned = handoff.strip(f"{code} I need help with the loan", code)
         assert cleaned == "I need help with the loan"
 
-    def test_the_alphabet_has_no_lookalikes(self):
+    async def test_the_alphabet_has_no_lookalikes(self):
         """People read these aloud and type them on a phone."""
         for ch in "O0I1L":
             assert ch not in handoff.ALPHABET
 
-    def test_codes_do_not_repeat(self):
-        codes = {handoff.create({}) for _ in range(200)}
+    async def test_codes_do_not_repeat(self):
+        codes = {await handoff.create({}) for _ in range(200)}
         assert len(codes) == 200
+
+
+class TestHandoffSurvivesARestart:
+    """The reason it moved out of a dict.
+
+    Its own comment said it needed a table "because a restart mid-handoff
+    strands whoever was crossing at that moment" — a person who answered six
+    questions on the website, tapped through to WhatsApp, and arrives to be
+    asked their state again.
+    """
+
+    @pytest.fixture(autouse=True)
+    async def _table(self):
+        """These tests must hit the database, not the in-memory fallback.
+
+        Without the table, `claim` falls back to the dict and every assertion
+        below passes for the wrong reason — which is exactly what happened the
+        first time they were run.
+        """
+        from src.database import init_database
+        await init_database()
+        handoff._PENDING.clear()
+        yield
+        handoff._PENDING.clear()
+
+    async def test_a_code_still_works_after_the_process_forgets(self):
+        code = await handoff.create({"state": "Bihar"}, [])
+        handoff._PENDING.clear()                 # what a redeploy does
+        entry = await handoff.claim(code)
+        assert entry is not None, "a restart stranded somebody mid-handoff"
+        assert entry.context["state"] == "Bihar"
+
+    async def test_still_exactly_once_after_a_restart(self):
+        """Single-use has to hold across processes, not just within one — the
+        same link can be forwarded, and Meta redelivers messages."""
+        code = await handoff.create({"state": "Kerala"}, [])
+        handoff._PENDING.clear()
+        assert await handoff.claim(code) is not None
+        assert await handoff.claim(code) is None
+
+    async def test_the_database_is_consulted_before_memory(self):
+        """Checking memory first would let two workers each serve the same
+        code, because each has its own dict."""
+        code = await handoff.create({"state": "Odisha"}, [])
+        assert await handoff.claim(code) is not None
+        # The in-process copy must have been spent by the same claim.
+        assert code not in handoff._PENDING
 
 
 class TestResume:
@@ -185,11 +232,11 @@ class TestResume:
         brain._CONTEXT.pop(user, None)
         brain._HISTORY.pop(user, None)
 
-        code = handoff.create(
+        code = await handoff.create(
             {"state": "Uttar Pradesh", "category": "Scheduled Caste (SC)"},
             [{"role": "user", "text": "I want a loan for a tailoring shop"}],
         )
-        remaining = brain._resume_from_web(user, f"{code} what next?")
+        remaining = await brain._resume_from_web(user, f"{code} what next?")
 
         assert brain._CONTEXT[user]["state"] == "Uttar Pradesh"
         assert len(brain._HISTORY[user]) == 1
@@ -203,6 +250,6 @@ class TestResume:
 
         user = "919000000098"
         brain._CONTEXT.pop(user, None)
-        remaining = brain._resume_from_web(user, "YS-ZZZZZZ hello")
+        remaining = await brain._resume_from_web(user, "YS-ZZZZZZ hello")
         assert remaining == "hello"
         assert not brain._CONTEXT[user]
