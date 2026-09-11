@@ -28,11 +28,12 @@ import uuid
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
+from src import interview
 from src.calculator import MoratoriumType, calculate_emi
 from src.discovery import Facets, discover
 from src.paths import MEDIA_DIR, TILE_DIR
 from src.config import SCHEMES, get_settings
-from src.i18n import DEFAULT_LANGUAGE, LANGUAGES, detect_language, t
+from src.i18n import DEFAULT_LANGUAGE, LANGUAGES, STRINGS, detect_language, t
 from src.routing import route_partners, utilisation_note
 from src.schemes import (
     UserProfile,
@@ -55,8 +56,29 @@ logger = logging.getLogger(__name__)
 #
 # So the opening asks what kind of help is needed. Credit questions are asked
 # only of people who said they want to borrow.
-STEPS_CREDIT = ["need", "cost", "income", "category", "gender", "place", "done"]
-STEPS_WELFARE = ["need", "category", "place", "done"]
+# The questions whose answers the product itself needs, in the order it needs
+# them. Everything between the prefix and `place` is chosen by `src.interview`
+# against the schemes still in play, so no two people are asked the same set.
+#
+# Credit keeps a longer prefix because the EMI calculator cannot run without a
+# project cost and an income — those are not discovery questions, they are inputs
+# to arithmetic. `place` stays last in both because it is the one answer the
+# partner router needs and the one people are most reluctant to give.
+PREFIX_WELFARE = ["need"]
+PREFIX_CREDIT = ["need", "cost", "income", "category", "gender"]
+
+#: Prefix answers that also fill an adaptive facet. Recorded as asked when the
+#: credit prefix finishes, so the interview does not ask a second time in
+#: different words — being asked your community twice reads as not listening.
+_PREFIX_COVERS = {"income": "income", "category": "caste", "gender": "gender"}
+
+#: An adaptive step is stored as `q:<question id>`, so one `step` field still
+#: describes the whole conversation and sessions stay a plain dataclass.
+_ADAPTIVE = "q:"
+
+#: The chip value that declines a question. Distinct from an unreadable answer:
+#: this one advances, that one re-asks.
+_SKIP = "__skip__"
 
 # What people come for, mapped to the corpus's own category strings. The values
 # are exact: a category name we invent filters to nothing.
@@ -89,10 +111,32 @@ class Session:
     step: str = "need"
     track: str = "welfare"
     answers: dict[str, Any] = field(default_factory=dict)
+    #: Adaptive question ids already put to this person, answered or skipped.
+    #: A skip belongs here too — it stops the question being offered again while
+    #: writing nothing to `facets`, which is what keeps skipping free.
+    asked: set[str] = field(default_factory=set)
+    #: What we know, accumulated. The interview reads this to decide what to ask
+    #: next, and discovery reads it to decide what matches — one object, so the
+    #: question that gets chosen is chosen against the same state that answers.
+    facets: Facets = field(default_factory=Facets)
 
     @property
-    def steps(self) -> list[str]:
-        return STEPS_CREDIT if self.track == "credit" else STEPS_WELFARE
+    def prefix(self) -> list[str]:
+        return PREFIX_CREDIT if self.track == "credit" else PREFIX_WELFARE
+
+
+def _reset(session: Session) -> None:
+    """Back to the opening question, forgetting everything.
+
+    `asked` and `facets` have to be cleared with `answers` or a second
+    conversation on the same session inherits the first one's profile and the
+    interview skips questions it never asked this person.
+    """
+    session.step = "need"
+    session.track = "welfare"
+    session.answers = {}
+    session.asked = set()
+    session.facets = Facets()
 
 
 _SESSIONS: dict[str, Session] = {}
@@ -182,10 +226,63 @@ def _chip(value: str, label: str) -> dict:
     return {"value": value, "label": label}
 
 
+def _t_or(key: str, lang: str, fallback: str) -> str:
+    """`t()`, but falling back to a caller-supplied string instead of the key.
+
+    `t()` ends at the key, which is right for a sentence we always write and
+    wrong for the twelve-odd option labels the interview offers: an untranslated
+    chip would read "opt_occupation_Farmer". The corpus's own English is a worse
+    answer than Hindi and a much better one than a variable name, and it lets the
+    translations land a language at a time instead of all at once.
+    """
+    entry = STRINGS.get(key)
+    if not entry:
+        return fallback
+    return entry.get(lang) or entry.get(DEFAULT_LANGUAGE) or fallback
+
+
+def _option_label(question_id: str, option, lang: str) -> str:
+    """Translate one chip, most specific key first.
+
+    `opt_<question>_<value>` lets a label be worded differently per question;
+    `opt_<value>` is the shared one, so "Yes" is translated once rather than
+    once per yes/no question. Failing both, the registry's English shows —
+    which is the right answer for the occupation list, whose values are
+    myScheme's own proper nouns and are not ours to translate.
+    """
+    specific = f"opt_{question_id}_{option.value}"
+    if specific in STRINGS:
+        return _t_or(specific, lang, option.label)
+    return _t_or(f"opt_{option.value}", lang, option.label)
+
+
+def _adaptive_question(session: Session) -> dict:
+    """Render one interview-chosen question.
+
+    The prompt comes from i18n under `ask_<id>`, falling back to English and then
+    to the key — so a language we have not translated yet asks the question in
+    English rather than showing a blank bubble.
+
+    Every adaptive question carries a skip. It is not politeness: an unanswered
+    question excludes nothing, so skipping costs the person only precision, and
+    saying so is what makes it safe to ask about caste or disability at all.
+    """
+    lang = session.language
+    question = interview.BY_ID[session.step[len(_ADAPTIVE):]]
+    chips = [_chip(o.value, _option_label(question.id, o, lang))
+             for o in question.options]
+    chips.append(_chip(_SKIP, _t_or("opt_skip", lang, "Skip this")))
+    return {"text": _t_or(f"ask_{question.id}", lang, question.fallback_prompt),
+            "chips": chips, "input": question.input}
+
+
 def _question(session: Session) -> dict:
     """The prompt and options for the session's current step."""
     lang = session.language
     step = session.step
+
+    if step.startswith(_ADAPTIVE):
+        return _adaptive_question(session)
 
     if step == "need":
         return {"text": t("ask_need", lang), "chips": [
@@ -226,13 +323,96 @@ def _question(session: Session) -> dict:
 
 
 def _advance(session: Session) -> None:
-    steps = session.steps
-    session.step = steps[min(steps.index(session.step) + 1, len(steps) - 1)]
+    """Decide what to ask next.
+
+    The prefix runs in order, then the interview chooses from what the remaining
+    schemes actually restrict on, then `place`, then results. The candidate set
+    is recomputed every turn against the answers so far, which is the whole
+    point: the second question depends on the first.
+    """
+    prefix = session.prefix
+    step = session.step
+
+    if step in prefix:
+        index = prefix.index(step)
+        if index + 1 < len(prefix):
+            session.step = prefix[index + 1]
+            return
+        # Prefix done. Whatever it already covers must not be asked twice.
+        for prefix_step, question_id in _PREFIX_COVERS.items():
+            if prefix_step in prefix:
+                session.asked.add(question_id)
+        _sync_prefix_facets(session)
+        session.step = _next_adaptive(session) or "place"
+        return
+
+    if step.startswith(_ADAPTIVE):
+        session.step = _next_adaptive(session) or "place"
+        return
+
+    session.step = "done"
+
+
+def _sync_prefix_facets(session: Session) -> None:
+    """Carry the prefix's answers into `facets` before the interview starts.
+
+    Without this the selector would choose its first question as though nothing
+    were known, and the credit track — which has already asked community, gender
+    and income — would pick questions it has the answers to.
+    """
+    answers = session.answers
+    if answers.get("category"):
+        session.facets.caste = str(answers["category"]).lower()
+    if answers.get("gender"):
+        session.facets.gender = answers["gender"]
+    if answers.get("annual_income") is not None:
+        session.facets.family_income = answers["annual_income"]
+    if answers.get("scheme_category"):
+        session.facets.categories = [answers["scheme_category"]]
+
+
+def _next_adaptive(session: Session) -> Optional[str]:
+    """The next interview step, or None when the interview is finished.
+
+    Runs discovery to see what is still in play. That is a corpus read per turn
+    (~95ms) and it is the price of the question depending on the answers; a
+    precomputed order would be a fixed wizard wearing a different hat.
+    """
+    try:
+        result = discover(session.facets, limit=5000, include_not_matched=False)
+        candidates = {match.slug for match in result.matches}
+    except Exception:                                   # pragma: no cover
+        # A missing or half-written corpus must not end the conversation — it
+        # degrades to the prefix plus `place`, which still produces an answer.
+        logger.warning("Interview could not read the corpus; skipping to place",
+                       exc_info=True)
+        return None
+    if not candidates:
+        return None
+    question = interview.next_question(candidates, session.asked)
+    return f"{_ADAPTIVE}{question.id}" if question else None
 
 
 def _accept(session: Session, message: str) -> bool:
     """Record an answer for the current step. False when it can't be read."""
     step, text = session.step, (message or "").strip()
+
+    if step.startswith(_ADAPTIVE):
+        question = interview.BY_ID[step[len(_ADAPTIVE):]]
+        # Asked either way. A declined question must stop being offered, or the
+        # selector — which only knows what it has asked, not what it learned —
+        # picks the same highest-scoring question again and the conversation
+        # loops on the one thing the person just refused.
+        session.asked.add(question.id)
+        if text.lower() in (_SKIP, "skip", "pass"):
+            return True
+        value = interview.coerce(question, text)
+        if value is None:
+            session.asked.discard(question.id)     # unreadable: ask it again
+            return False
+        interview.apply_answer(session.facets, question, value)
+        session.answers[question.id] = value
+        return True
 
     if step == "need":
         need = NEED_BY_ID.get(text.lower())
@@ -303,11 +483,14 @@ async def _build_welfare_results(session: Session) -> tuple[str, list[dict]]:
     a = session.answers
     place = a.get("place") or {}
 
-    facets = Facets(
-        caste=(a.get("category") or "").lower() or None,
-        state=place.get("state"),
-        categories=[a["scheme_category"]] if a.get("scheme_category") else [],
-    )
+    # `session.facets` is what the interview has been accumulating and choosing
+    # questions against, so the results are computed from exactly the state the
+    # questions were chosen from. Rebuilding a fresh Facets from three keys here
+    # is what used to throw away everything past community and state.
+    facets = session.facets
+    _sync_prefix_facets(session)
+    if place.get("state"):
+        facets.state = place["state"]
     result = discover(facets, limit=6)
 
     if not result.matches:
@@ -478,9 +661,7 @@ async def turn(
     session = get_session(session_id)
 
     if restart:
-        session.step = "need"
-        session.track = "welfare"
-        session.answers = {}
+        _reset(session)
 
     if language and language in LANGUAGES:
         session.language = language
@@ -504,9 +685,7 @@ async def turn(
         }
 
     if session.step == "done":
-        session.step = "need"
-        session.track = "welfare"
-        session.answers = {}
+        _reset(session)
         question = _question(session)
         return {
             "session_id": session.session_id, "language": lang,

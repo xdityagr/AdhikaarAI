@@ -101,6 +101,9 @@ def corpus(tmp_path_factory) -> Path:
         _scheme("low-income", "Low Income Scheme", state="All", income_max=100_000),
         # Age band.
         _scheme("elderly", "Old Age Pension", state="All", age_min=60, age_max=120),
+        # "No age limit", as myScheme actually writes it: 0 to 100. Must not be
+        # read as a band, in either direction.
+        _scheme("any-age", "Any Age Scheme", state="All", age_min=0, age_max=100),
         # Yes-only flag requirements.
         _scheme("bpl-only", "BPL Scheme", state="All", flags=["isBpl"]),
         _scheme("disability-only", "Disability Scheme", state="All",
@@ -194,6 +197,30 @@ class TestDefiniteMismatch:
     def test_age_outside_the_band_is_excluded(self, corpus):
         assert "elderly" not in names(discover(Facets(age=30), limit=100, corpus_path=corpus))
         assert "elderly" in names(discover(Facets(age=65), limit=100, corpus_path=corpus))
+
+    def test_an_unrestricted_age_band_is_not_a_reason(self, corpus):
+        """myScheme writes "no age limit" as 0 to 100, and 327 schemes carry it.
+
+        Counting that as a match inflated those schemes above ones genuinely
+        aimed at the person, and told them they had "matched on age" against a
+        rule the scheme never published — the mirror image of excluding someone
+        on an unpublished criterion, and just as dishonest. It surfaced when the
+        interview began asking for an age: a 65-year-old widow wanting a pension
+        was shown post-matric scholarships, every one matched on age.
+        """
+        result = discover(Facets(age=65), limit=200, corpus_path=corpus)
+        wide = next(m for m in result.matches if m.slug == "any-age")
+        assert "age" not in wide.matched_on
+        assert "age" not in wide.unknown
+        # Still matched — not restricting on age must never mean excluded.
+        assert "any-age" in names(result)
+
+    def test_an_unrestricted_age_band_is_not_a_reason_when_age_is_unknown(self, corpus):
+        """Nor may it sit in `unknown`, where it would cost relevance points for
+        a question there was never any point in asking."""
+        result = discover(Facets(), limit=200, corpus_path=corpus)
+        wide = next(m for m in result.matches if m.slug == "any-age")
+        assert "age" not in wide.unknown
 
     def test_flag_requirement_excludes_when_user_says_no(self, corpus):
         result = discover(Facets(is_bpl=False), limit=100, corpus_path=corpus)
