@@ -1,7 +1,7 @@
 [project]
 name = "yojnasetu"
 version = "0.1.0"
-description = "AI-Driven Scheme Matching for NSFDC Credit Schemes — SIH26092"
+description = "Scheme discovery for India — every central and state welfare, scholarship, pension and credit scheme, matched deterministically against published eligibility rules."
 requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115",

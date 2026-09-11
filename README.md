@@ -1,9 +1,28 @@
-# Yojna Setu — SIH26092
+# Yojna Setu — योजना सेतु
 
-**AI-Driven Scheme Matching for NSFDC Credit Schemes**  
-Smart India Hackathon 2026 · PS26092 · Ministry of Social Justice & Empowerment
+**Finding the benefits people do not know they qualify for**
 
-WhatsApp-first assistant that helps SC beneficiaries find NSFDC loan/education schemes they qualify for, estimates their EMI, and locates the nearest eligible Channel Partner.
+India runs several thousand welfare and subsidy schemes. Enormous sums go
+unclaimed every year, and the reason is almost never ineligibility — it is
+discovery. The information exists, scattered across hundreds of portals, written
+in dense administrative English, and organised by which department owns it
+rather than by who needs it.
+
+Yojna Setu inverts that. You describe your situation; it finds the schemes you
+qualify for, explains them in your language, and tells you exactly what to do
+next.
+
+- **4,700+ central and state schemes**, matched against their *published* rules.
+  Eligibility is computed in code, never guessed by a language model — telling
+  someone they qualify when they do not is a real harm.
+- **Explainable both ways.** Every match says why. Every near miss says exactly
+  what disqualified you.
+- **13 languages, voice input, low-end phones**, on the web and on WhatsApp.
+- **Five NSFDC credit schemes modelled in full** — deep enough to say *eligible*
+  rather than merely *likely*, with the true cost of the loan worked out against
+  what a moneylender would charge.
+
+Built for Smart India Hackathon 2026.
 
 ## Quick Start
 
