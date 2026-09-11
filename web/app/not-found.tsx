@@ -44,12 +44,30 @@ export default async function NotFound() {
         </ButtonLink>
       </div>
 
+      {/*
+        One string with the link's position marked in it, split around the
+        placeholder — rather than English text, a link, and a full stop set as
+        three separate things in the JSX. Word order is the reason: Hindi ends
+        the sentence on the verb, so "Or go back to the ___" has the link in the
+        middle there and at the end here, and no amount of concatenation in a
+        fixed order can produce both.
+      */}
       <p className="mt-8 text-sm text-muted-foreground">
-        Or go back to the{" "}
-        <Link href="/" className="font-medium text-primary underline underline-offset-4">
-          {t("notfound.home")}
-        </Link>
-        .
+        {(() => {
+          const [before, after] = t("notfound.back").split("{home}");
+          return (
+            <>
+              {before}
+              <Link
+                href="/"
+                className="font-medium text-primary underline underline-offset-4"
+              >
+                {t("notfound.home")}
+              </Link>
+              {after}
+            </>
+          );
+        })()}
       </p>
     </div>
   );

@@ -106,7 +106,11 @@ export default async function HomePage() {
             </p>
           </Reveal>
           <Reveal delay={80}>
-            <CategoryGrid categories={meta.categories} className="mt-12" />
+            <CategoryGrid
+              categories={meta.categories}
+              lang={lang}
+              className="mt-12"
+            />
           </Reveal>
           <div className="mt-10 flex justify-center">
             <ButtonLink href="/schemes" variant="outline" size="pill" className="bg-card">

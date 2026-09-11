@@ -275,6 +275,14 @@ export const FACET_LABELS: Vocabulary = {
     hi: "उम्र", mr: "वय", bn: "বয়স", ta: "வயது", te: "వయసు", gu: "ઉંમર",
     kn: "ವಯಸ್ಸು", ml: "പ്രായം", pa: "ਉਮਰ", or: "ବୟସ", as: "বয়স", ur: "عمر",
   },
+  // A scheme that caps what you may own. Added after the coverage test below
+  // found it: `_check_assets` emits this and nothing else did, so it was the
+  // one facet still reaching every reader in English.
+  assets: {
+    hi: "संपत्ति", mr: "मालमत्ता", bn: "সম্পত্তি", ta: "சொத்து",
+    te: "ఆస్తులు", gu: "મિલકત", kn: "ಆಸ್ತಿ", ml: "ആസ്തി", pa: "ਜਾਇਦਾਦ",
+    or: "ସମ୍ପତ୍ତି", as: "সম্পত্তি", ur: "جائیداد",
+  },
   caste: {
     hi: "जाति", mr: "जात", bn: "জাতি", ta: "சாதி", te: "కులం", gu: "જાતિ",
     kn: "ಜಾತಿ", ml: "ജാതി", pa: "ਜਾਤ", or: "ଜାତି", as: "জাতি", ur: "ذات",
@@ -382,3 +390,147 @@ export const listJoin = (lang: Lang, parts: string[]) =>
 
 export const facetList = (lang: Lang, names: string[]) =>
   listJoin(lang, names.map((n) => facetLabel(lang, n)));
+
+/**
+ * The document a photograph turned out to be.
+ *
+ * `src/documents.py` classifies against a closed set of sixteen labels
+ * (`KNOWN_DOCUMENTS`) and the English label is the value: it is matched against
+ * the scheme's own published document list, so translating the value would
+ * silently stop it matching anything — the same trap `CATEGORY_LABELS` warns
+ * about above.
+ *
+ * Only the label is translated. Without this, `documents.ticked` rendered as
+ * "यह आपका Aadhaar card लगता है। टिक कर दिया।" — the sentence in Hindi and the
+ * thing it was about in English, at the moment someone is holding the document
+ * up to a camera.
+ *
+ * Abbreviations and the names printed on the forms themselves stay as they are:
+ * PAN, EPIC, UDID, khatauni, 7/12, pahani. Those are what the paper says, and a
+ * translated one sends someone to ask a clerk for a document that has no name.
+ */
+export const DOCUMENT_LABELS: Vocabulary = {
+  "Aadhaar card": {
+    hi: "आधार कार्ड", mr: "आधार कार्ड", bn: "আধার কার্ড", ta: "ஆதார் அட்டை",
+    te: "ఆధార్ కార్డు", gu: "આધાર કાર્ડ", kn: "ಆಧಾರ್ ಕಾರ್ಡ್",
+    ml: "ആധാർ കാർഡ്", pa: "ਆਧਾਰ ਕਾਰਡ", or: "ଆଧାର କାର୍ଡ", as: "আধাৰ কাৰ্ড",
+    ur: "آدھار کارڈ",
+  },
+  "PAN card": {
+    hi: "PAN कार्ड", mr: "PAN कार्ड", bn: "PAN কার্ড", ta: "PAN அட்டை",
+    te: "PAN కార్డు", gu: "PAN કાર્ડ", kn: "PAN ಕಾರ್ಡ್", ml: "PAN കാർഡ്",
+    pa: "PAN ਕਾਰਡ", or: "PAN କାର୍ଡ", as: "PAN কাৰ্ড", ur: "PAN کارڈ",
+  },
+  "Ration card": {
+    hi: "राशन कार्ड", mr: "रेशन कार्ड", bn: "রেশন কার্ড", ta: "ரேஷன் அட்டை",
+    te: "రేషన్ కార్డు", gu: "રાશન કાર્ડ", kn: "ಪಡಿತರ ಚೀಟಿ",
+    ml: "റേഷൻ കാർഡ്", pa: "ਰਾਸ਼ਨ ਕਾਰਡ", or: "ରାଶନ କାର୍ଡ", as: "ৰেচন কাৰ্ড",
+    ur: "راشن کارڈ",
+  },
+  "Voter ID (EPIC)": {
+    hi: "मतदाता पहचान पत्र (EPIC)", mr: "मतदार ओळखपत्र (EPIC)",
+    bn: "ভোটার পরিচয়পত্র (EPIC)", ta: "வாக்காளர் அடையாள அட்டை (EPIC)",
+    te: "ఓటరు గుర్తింపు కార్డు (EPIC)", gu: "મતદાર ઓળખકાર્ડ (EPIC)",
+    kn: "ಮತದಾರ ಗುರುತಿನ ಚೀಟಿ (EPIC)", ml: "വോട്ടർ തിരിച്ചറിയൽ കാർഡ് (EPIC)",
+    pa: "ਵੋਟਰ ਸ਼ਨਾਖ਼ਤੀ ਕਾਰਡ (EPIC)", or: "ଭୋଟର ପରିଚୟ ପତ୍ର (EPIC)",
+    as: "ভোটাৰ পৰিচয় পত্ৰ (EPIC)", ur: "ووٹر شناختی کارڈ (EPIC)",
+  },
+  "Caste certificate": {
+    hi: "जाति प्रमाण पत्र", mr: "जातीचा दाखला", bn: "জাতি সনদপত্র",
+    ta: "சாதி சான்றிதழ்", te: "కుల ధ్రువీకరణ పత్రం", gu: "જાતિ પ્રમાણપત્ર",
+    kn: "ಜಾತಿ ಪ್ರಮಾಣಪತ್ರ", ml: "ജാതി സർട്ടിഫിക്കറ്റ്",
+    pa: "ਜਾਤੀ ਸਰਟੀਫਿਕੇਟ", or: "ଜାତି ପ୍ରମାଣପତ୍ର", as: "জাতি প্ৰমাণপত্ৰ",
+    ur: "ذات کا سرٹیفکیٹ",
+  },
+  "Income certificate": {
+    hi: "आय प्रमाण पत्र", mr: "उत्पन्नाचा दाखला", bn: "আয়ের সনদপত্র",
+    ta: "வருமானச் சான்றிதழ்", te: "ఆదాయ ధ్రువీకరణ పత్రం",
+    gu: "આવક પ્રમાણપત્ર", kn: "ಆದಾಯ ಪ್ರಮಾಣಪತ್ರ", ml: "വരുമാന സർട്ടിഫിക്കറ്റ്",
+    pa: "ਆਮਦਨ ਸਰਟੀਫਿਕੇਟ", or: "ଆୟ ପ୍ରମାଣପତ୍ର", as: "আয়ৰ প্ৰমাণপত্ৰ",
+    ur: "آمدنی کا سرٹیفکیٹ",
+  },
+  "Domicile or residence certificate": {
+    hi: "निवास प्रमाण पत्र", mr: "रहिवासी दाखला", bn: "বাসস্থানের সনদপত্র",
+    ta: "வசிப்பிடச் சான்றிதழ்", te: "నివాస ధ్రువీకరణ పత్రం",
+    gu: "રહેઠાણ પ્રમાણપત્ર", kn: "ವಾಸಸ್ಥಳ ಪ್ರಮಾಣಪತ್ರ",
+    ml: "താമസ സർട്ടിഫിക്കറ്റ്", pa: "ਰਿਹਾਇਸ਼ੀ ਸਰਟੀਫਿਕੇਟ",
+    or: "ବସବାସ ପ୍ରମାଣପତ୍ର", as: "নিবাসৰ প্ৰমাণপত্ৰ", ur: "رہائش کا سرٹیفکیٹ",
+  },
+  "Bank passbook": {
+    hi: "बैंक पासबुक", mr: "बँक पासबुक", bn: "ব্যাঙ্কের পাসবই",
+    ta: "வங்கி கணக்குப் புத்தகம்", te: "బ్యాంక్ పాస్‌బుక్",
+    gu: "બૅન્ક પાસબુક", kn: "ಬ್ಯಾಂಕ್ ಪಾಸ್‌ಬುಕ್", ml: "ബാങ്ക് പാസ്ബുക്ക്",
+    pa: "ਬੈਂਕ ਪਾਸਬੁੱਕ", or: "ବ୍ୟାଙ୍କ ପାସବୁକ", as: "বেংক পাছবুক",
+    ur: "بینک پاس بک",
+  },
+  "Birth certificate": {
+    hi: "जन्म प्रमाण पत्र", mr: "जन्म दाखला", bn: "জন্ম সনদপত্র",
+    ta: "பிறப்புச் சான்றிதழ்", te: "జన్మ ధ్రువీకరణ పత్రం",
+    gu: "જન્મ પ્રમાણપત્ર", kn: "ಜನನ ಪ್ರಮಾಣಪತ್ರ", ml: "ജനന സർട്ടിഫിക്കറ്റ്",
+    pa: "ਜਨਮ ਸਰਟੀਫਿਕੇਟ", or: "ଜନ୍ମ ପ୍ରମାଣପତ୍ର", as: "জন্ম প্ৰমাণপত্ৰ",
+    ur: "پیدائش کا سرٹیفکیٹ",
+  },
+  "Disability certificate": {
+    hi: "दिव्यांगता प्रमाण पत्र", mr: "अपंगत्व दाखला",
+    bn: "প্রতিবন্ধকতার সনদপত্র", ta: "மாற்றுத்திறன் சான்றிதழ்",
+    te: "వికలాంగ ధ్రువీకరణ పత్రం", gu: "વિકલાંગતા પ્રમાણપત્ર",
+    kn: "ಅಂಗವಿಕಲತೆ ಪ್ರಮಾಣಪತ್ರ", ml: "വൈകല്യ സർട്ടിഫിക്കറ്റ്",
+    pa: "ਅਪੰਗਤਾ ਸਰਟੀਫਿਕੇਟ", or: "ଦିବ୍ୟାଙ୍ଗ ପ୍ରମାଣପତ୍ର",
+    as: "অক্ষমতাৰ প্ৰমাণপত্ৰ", ur: "معذوری کا سرٹیفکیٹ",
+  },
+  "Land record (khatauni / 7-12 / pahani)": {
+    hi: "भूमि अभिलेख (खतौनी / 7-12 / पहाणी)",
+    mr: "जमिनीचा उतारा (खतौनी / 7-12 / पहाणी)",
+    bn: "জমির নথি (khatauni / 7-12 / pahani)",
+    ta: "நில ஆவணம் (khatauni / 7-12 / pahani)",
+    te: "భూమి రికార్డు (khatauni / 7-12 / pahani)",
+    gu: "જમીન રેકોર્ડ (khatauni / 7-12 / pahani)",
+    kn: "ಭೂ ದಾಖಲೆ (khatauni / 7-12 / pahani)",
+    ml: "ഭൂരേഖ (khatauni / 7-12 / pahani)",
+    pa: "ਜ਼ਮੀਨ ਦਾ ਰਿਕਾਰਡ (khatauni / 7-12 / pahani)",
+    or: "ଜମି ରେକର୍ଡ (khatauni / 7-12 / pahani)",
+    as: "মাটিৰ নথি (khatauni / 7-12 / pahani)",
+    ur: "زمین کا ریکارڈ (khatauni / 7-12 / pahani)",
+  },
+  "Marksheet or school certificate": {
+    hi: "अंकपत्र या स्कूल प्रमाण पत्र", mr: "गुणपत्रक किंवा शाळेचा दाखला",
+    bn: "মার্কশিট বা স্কুলের সনদপত্র",
+    ta: "மதிப்பெண் பட்டியல் அல்லது பள்ளிச் சான்றிதழ்",
+    te: "మార్కుల పత్రం లేదా పాఠశాల ధ్రువీకరణ పత్రం",
+    gu: "માર્કશીટ અથવા શાળાનું પ્રમાણપત્ર",
+    kn: "ಅಂಕಪಟ್ಟಿ ಅಥವಾ ಶಾಲಾ ಪ್ರಮಾಣಪತ್ರ",
+    ml: "മാർക്ക് ലിസ്റ്റ് അല്ലെങ്കിൽ സ്കൂൾ സർട്ടിഫിക്കറ്റ്",
+    pa: "ਮਾਰਕਸ਼ੀਟ ਜਾਂ ਸਕੂਲ ਸਰਟੀਫਿਕੇਟ",
+    or: "ମାର୍କସିଟ କିମ୍ବା ସ୍କୁଲ ପ୍ରମାଣପତ୍ର",
+    as: "মাৰ্কশীট বা স্কুলৰ প্ৰমাণপত্ৰ", ur: "مارک شیٹ یا اسکول کا سرٹیفکیٹ",
+  },
+  "Death certificate": {
+    hi: "मृत्यु प्रमाण पत्र", mr: "मृत्यू दाखला", bn: "মৃত্যু সনদপত্র",
+    ta: "இறப்புச் சான்றிதழ்", te: "మరణ ధ్రువీకరణ పత్రం",
+    gu: "મૃત્યુ પ્રમાણપત્ર", kn: "ಮರಣ ಪ್ರಮಾಣಪತ್ರ", ml: "മരണ സർട്ടിഫിക്കറ്റ്",
+    pa: "ਮੌਤ ਦਾ ਸਰਟੀਫਿਕੇਟ", or: "ମୃତ୍ୟୁ ପ୍ରମାଣପତ୍ର", as: "মৃত্যু প্ৰমাণপত্ৰ",
+    ur: "موت کا سرٹیفکیٹ",
+  },
+  Photograph: {
+    hi: "फोटो", mr: "फोटो", bn: "ছবি", ta: "புகைப்படம்", te: "ఫోటో",
+    gu: "ફોટો", kn: "ಫೋಟೋ", ml: "ഫോട്ടോ", pa: "ਫੋਟੋ", or: "ଫଟୋ",
+    as: "ফটো", ur: "تصویر",
+  },
+  "Driving licence": {
+    hi: "ड्राइविंग लाइसेंस", mr: "वाहन परवाना", bn: "ড্রাইভিং লাইসেন্স",
+    ta: "ஓட்டுநர் உரிமம்", te: "డ్రైవింగ్ లైసెన్స్", gu: "ડ્રાઇવિંગ લાઇસન્સ",
+    kn: "ಚಾಲನಾ ಪರವಾನಗಿ", ml: "ഡ്രൈവിങ് ലൈസൻസ്", pa: "ਡਰਾਈਵਿੰਗ ਲਾਇਸੈਂਸ",
+    or: "ଡ୍ରାଇଭିଂ ଲାଇସେନ୍ସ", as: "ড্ৰাইভিং লাইচেন্স", ur: "ڈرائیونگ لائسنس",
+  },
+  "Labour or worker card": {
+    hi: "श्रमिक कार्ड (e-Shram)", mr: "कामगार कार्ड (e-Shram)",
+    bn: "শ্রমিক কার্ড (e-Shram)", ta: "தொழிலாளர் அட்டை (e-Shram)",
+    te: "కార్మిక కార్డు (e-Shram)", gu: "શ્રમિક કાર્ડ (e-Shram)",
+    kn: "ಕಾರ್ಮಿಕ ಕಾರ್ಡ್ (e-Shram)", ml: "തൊഴിലാളി കാർഡ് (e-Shram)",
+    pa: "ਮਜ਼ਦੂਰ ਕਾਰਡ (e-Shram)", or: "ଶ୍ରମିକ କାର୍ଡ (e-Shram)",
+    as: "শ্ৰমিক কাৰ্ড (e-Shram)", ur: "مزدور کارڈ (e-Shram)",
+  },
+};
+
+export const documentLabel = (lang: Lang, name: string) =>
+  label(DOCUMENT_LABELS, lang, name);

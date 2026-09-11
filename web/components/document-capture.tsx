@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Camera, ImageUp, Loader2, X } from "lucide-react";
 
+import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
 
 /**
@@ -48,6 +49,7 @@ export function DocumentCapture({
    *  started showing English again the first time a new caller forgot it. */
   label: string;
 }) {
+  const { t } = useLanguage();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -85,7 +87,7 @@ export function DocumentCapture({
       setPhase("live");
     } catch {
       setPhase("idle");
-      setError("The camera could not be opened. You can pick a photo instead.");
+      setError(t("documents.capture.noCamera"));
     }
   }, []);
 
@@ -137,7 +139,7 @@ export function DocumentCapture({
         );
         if (blob) await onCaptured(blob);
       } catch {
-        setError("That photo could not be read. Try another one.");
+        setError(t("documents.capture.unreadable"));
       }
       setPhase("idle");
     },
@@ -156,7 +158,7 @@ export function DocumentCapture({
             stop();
             onClose();
           }}
-          aria-label="Close"
+          aria-label={t("documents.capture.close")}
           className="rounded-lg p-1 text-faint hover:text-foreground"
         >
           <X className="size-4" />
@@ -190,11 +192,11 @@ export function DocumentCapture({
       <div className="mt-3 flex flex-wrap gap-2">
         {phase === "live" ? (
           <Button type="button" onClick={() => void shoot()} disabled={working}>
-            Take the photo
+            {t("documents.capture.take")}
           </Button>
         ) : (
           <Button type="button" onClick={() => void start()} disabled={working}>
-            <Camera className="size-4" /> Open the camera
+            <Camera className="size-4" /> {t("documents.capture.open")}
           </Button>
         )}
         <Button
@@ -203,7 +205,7 @@ export function DocumentCapture({
           disabled={working}
           onClick={() => fileRef.current?.click()}
         >
-          <ImageUp className="size-4" /> Choose a photo
+          <ImageUp className="size-4" /> {t("documents.capture.choose")}
         </Button>
       </div>
 

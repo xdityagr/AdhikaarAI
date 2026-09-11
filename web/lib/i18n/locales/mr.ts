@@ -513,7 +513,7 @@ export const mr: Strings = {
   "check.q.puccaHouse": "तुमच्या कुटुंबाकडे पक्के घर आहे का?",
   "check.q.boat": "तुमच्याकडे नोंदणीकृत मासेमारी नाव आहे का?",
   "chat.card.aimed": "तुमच्यासाठी लक्षित, एकूण {total} पैकी",
-  "chat.card.matchedOn": "{facets} वर जुळते",
+  "chat.card.matchedOn": "{facets} — जुळले",
   "chat.card.found": "{count} सापडले",
   "chat.card.compare": "{label} → त्याच {loan} वर {amount}. तुमचे {saving} वाचतात.",
   "chat.card.years": "{years} वर्षे",
@@ -529,4 +529,8 @@ export const mr: Strings = {
   "partners.estimated": "आमचा अंदाज, NSFDC चा आकडा नाही",
   "schemes.unavailable": "योजनांची यादी आत्ता उपलब्ध नाही. ही एक स्थानिक प्रत आहे जी पुन्हा तयार होत असावी — एका मिनिटानंतर पुन्हा शोधल्यास सहसा काम होते.",
   "category.rebuilding": "योजनांची यादी पुन्हा तयार होत आहे. तोपर्यंत थेट पाहा किंवा शोधा.",
+  "documents.capture.noCamera": "कॅमेरा उघडता आला नाही. तुम्ही त्याऐवजी फोटो निवडू शकता.",
+  "documents.capture.unreadable": "तो फोटो वाचता आला नाही. दुसरा प्रयत्न करा.",
+  "documents.capture.close": "बंद करा",
+  "site.title": "Yojna Setu — तुम्ही खरोखर पात्र असलेल्या योजना शोधा",
 };

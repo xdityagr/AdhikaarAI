@@ -241,11 +241,18 @@ function Provenance({
 }) {
   // The date is formatted in the reader's own locale — a Tamil page that dates
   // its source in English months is still half in English.
+  //
+  // Latin digits, though, for the same reason `formatNumber` pins them: left to
+  // itself Intl gives bn, mr, as and ur their own numerals — "১২ সেপ্টেম্বর,
+  // ২০২৬", "۱۲ ستمبر، ۲۰۲۶" — and a date someone copies onto a paper form has to
+  // be in the digits the clerk reads. The month name is words and translates;
+  // the numbers are what gets written down.
   const fetched = scheme.fetched_at
     ? new Date(scheme.fetched_at).toLocaleDateString(`${lang}-IN`, {
         day: "numeric",
         month: "long",
         year: "numeric",
+        numberingSystem: "latn",
       })
     : null;
 

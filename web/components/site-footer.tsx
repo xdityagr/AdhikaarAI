@@ -29,9 +29,9 @@ const COLUMNS = [
   {
     title: "footer.sources",
     links: [
-      { href: "https://www.myscheme.gov.in", label: "myScheme (Govt. of India)" },
+      { href: "https://www.myscheme.gov.in", label: "footer.source.myscheme" },
       { href: "https://nsfdc.nic.in", label: "NSFDC" },
-      { href: "https://pfms.nic.in", label: "PFMS — payment status" },
+      { href: "https://pfms.nic.in", label: "footer.source.pfms" },
     ],
   },
 ];

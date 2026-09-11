@@ -1,6 +1,7 @@
 import { ArrowRight, ExternalLink } from "lucide-react";
 
 import { PageHeader } from "@/components/page-header";
+import { type Translate } from "@/lib/i18n";
 import { getT } from "@/lib/i18n/server";
 import { ButtonLink } from "@/components/ui/button-link";
 
@@ -86,9 +87,7 @@ export default async function PartnersPage() {
                     <PartnerRow
                       key={partner.partner_id}
                       partner={partner}
-                      deployed={t("partners.deployed")}
-                      official={t("partners.official")}
-                      mapLabel={t("partners.map")}
+                      t={t}
                     />
                   ))}
                 </ul>
@@ -128,14 +127,10 @@ export default async function PartnersPage() {
  */
 function PartnerRow({
   partner,
-  deployed,
-  official,
-  mapLabel,
+  t,
 }: {
   partner: Partner;
-  deployed: string;
-  official: string;
-  mapLabel: string;
+  t: Translate;
 }) {
   const utilisation = partner.cumulative_utilization;
   const percent = utilisation !== null ? Math.round(utilisation * 100) : null;
@@ -167,7 +162,7 @@ function PartnerRow({
           <span
             className={`tnum shrink-0 rounded-full px-3 py-1 text-[0.8125rem] font-medium ${tone}`}
           >
-            {percent}% {deployed}
+            {percent}% {t("partners.deployed")}
           </span>
         ) : null}
       </div>
@@ -182,12 +177,14 @@ function PartnerRow({
         {partner.utilisation_confidence ? (
           <span>
             {partner.utilisation_confidence === "OFFICIAL"
-              ? official
-              : `${partner.utilisation_confidence.toLowerCase()}`}
+              ? t("partners.official")
+              : t("partners.estimated")}
           </span>
         ) : null}
         {partner.net_npa_percentage !== null ? (
-          <span className="tnum">Net NPA {partner.net_npa_percentage}%</span>
+          <span className="tnum">
+            {t("partners.npa", { rate: partner.net_npa_percentage })}
+          </span>
         ) : null}
         {partner.latitude && partner.longitude ? (
           <a
@@ -196,7 +193,7 @@ function PartnerRow({
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1 text-leaf underline-offset-4 hover:underline"
           >
-            {mapLabel}
+            {t("partners.map")}
             <ExternalLink className="size-3" />
           </a>
         ) : null}

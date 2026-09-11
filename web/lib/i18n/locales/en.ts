@@ -556,4 +556,8 @@ export const en = {
   "partners.estimated": "our own estimate, not NSFDC's figure",
   "schemes.unavailable": "The scheme list is not available right now. It is a local copy that may be rebuilding — searching again in a minute usually works.",
   "category.rebuilding": "The scheme list is being rebuilt. Browse or search directly in the meantime.",
+  "documents.capture.noCamera": "The camera could not be opened. You can pick a photo instead.",
+  "documents.capture.unreadable": "That photo could not be read. Try another one.",
+  "documents.capture.close": "Close",
+  "site.title": "Yojna Setu — find the schemes you actually qualify for",
 } as const;

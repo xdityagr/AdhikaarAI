@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { formatNumber, translator, type Lang } from "@/lib/i18n";
+import { categoryLabel } from "@/lib/i18n/vocabulary";
 import { cn } from "@/lib/utils";
 
 /**
@@ -16,16 +18,19 @@ import { cn } from "@/lib/utils";
  */
 export function CategoryGrid({
   categories,
+  lang,
   className,
 }: {
   categories: { name: string; count: number }[];
+  lang: Lang;
   className?: string;
 }) {
+  const t = translator(lang);
+
   if (categories.length === 0) {
     return (
       <p className={cn("text-sm text-muted-foreground", className)}>
-        The scheme list is being rebuilt. Browse or search directly in the
-        meantime.
+        {t("category.rebuilding")}
       </p>
     );
   }
@@ -44,10 +49,10 @@ export function CategoryGrid({
           className="group bg-card px-5 py-6 transition-colors duration-200 hover:bg-accent"
         >
           <span className="tnum block font-display text-[1.75rem] font-light leading-none tracking-[-0.03em] text-leaf transition-transform duration-200 group-hover:-translate-y-0.5">
-            {category.count.toLocaleString("en-IN")}
+            {formatNumber(lang, category.count)}
           </span>
           <span className="mt-2.5 block text-[0.9375rem] leading-snug text-foreground">
-            {category.name}
+            {categoryLabel(lang, category.name)}
           </span>
         </Link>
       ))}
