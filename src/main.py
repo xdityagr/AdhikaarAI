@@ -100,7 +100,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Yojna Setu",
-    description="AI-Driven Scheme Matching for NSFDC Credit Schemes — SIH26092",
+    description="Scheme discovery for India — every central and state welfare, scholarship, pension and credit scheme, matched deterministically against published eligibility rules.",
     version="0.1.0",
     lifespan=lifespan,
 )
@@ -234,7 +234,7 @@ async def api_info():
     """What this service is, for anything that pings the old root route."""
     return {
         "name": "Yojna Setu",
-        "description": "AI-Driven Scheme Matching for NSFDC Credit Schemes — SIH26092",
+        "description": "Scheme discovery for India — every central and state welfare, scholarship, pension and credit scheme, matched deterministically against published eligibility rules.",
         "landing": "/",
         "portal": "/app",
         "health": "/health",

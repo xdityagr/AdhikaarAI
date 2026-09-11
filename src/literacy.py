@@ -136,9 +136,9 @@ def format_fraud_shield() -> str:
     filing, that is us, it is optional, and the free path stays visible.
     """
     return (
-        "⚠️ *NSFDC never charges a fee to apply.* "
-        "If anyone asks you for money to process or approve your loan, that is fraud. "
-        "You can apply yourself, free, through a channel partner."
+        "⚠️ *No government scheme charges a fee to apply.* "
+        "If anyone asks you for money to process or approve your application, "
+        "that is fraud. You can apply yourself, free."
     )
 
 

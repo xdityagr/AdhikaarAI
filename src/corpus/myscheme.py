@@ -52,6 +52,7 @@ myscheme.gov.in.
 
 from __future__ import annotations
 
+import hashlib
 import json
 import logging
 import sqlite3
@@ -140,7 +141,16 @@ SCHEMA = [
         official_url TEXT,
         depth TEXT NOT NULL DEFAULT 'DISCOVERY',   -- FULL only for NSFDC credit
         source TEXT NOT NULL DEFAULT 'myscheme',
-        fetched_at TEXT
+        fetched_at TEXT,
+        -- When this scheme FIRST appeared in the corpus. Written on insert and
+        -- never touched again, which is the whole point: `fetched_at` moves on
+        -- every re-crawl, so it can say when we last looked but never when
+        -- something arrived. "A scheme launched and you now qualify" is a
+        -- question only this column can answer.
+        first_seen TEXT,
+        -- Hash of the structured eligibility, so a widened criterion is
+        -- detectable without keeping an old copy of the corpus to diff against.
+        eligibility_hash TEXT
     )
     """,
     # Structured eligibility, harvested from the lang=hi overlay. This is what
@@ -272,9 +282,37 @@ def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
     return conn
 
 
+#: Columns added after the first corpus was already built. `CREATE TABLE IF NOT
+#: EXISTS` does nothing to a table that exists, so a corpus ingested before these
+#: were declared would silently lack them and every query against them would
+#: throw. Additive only — this cannot rename, retype or drop, and it is not the
+#: beginning of a migration system.
+_ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
+    "schemes": [("first_seen", "TEXT"), ("eligibility_hash", "TEXT")],
+}
+
+
+def _ensure_columns(conn: sqlite3.Connection) -> None:
+    for table, columns in _ADDED_COLUMNS.items():
+        existing = {row[1] for row in conn.execute(f"PRAGMA table_info({table})")}
+        for name, decl in columns:
+            if name not in existing:
+                conn.execute(f"ALTER TABLE {table} ADD COLUMN {name} {decl}")
+                logger.info("Added %s.%s to an existing corpus", table, name)
+
+
 def init_db(conn: sqlite3.Connection) -> None:
     for statement in SCHEMA:
         conn.execute(statement)
+    _ensure_columns(conn)
+    # Backfill `first_seen` for a corpus built before the column existed. The
+    # honest value is when we first fetched the scheme, not now — dating 4,736
+    # existing schemes to today would announce the entire corpus as "new" on the
+    # first alert run and message every user about every scheme they qualify for.
+    conn.execute(
+        "UPDATE schemes SET first_seen = fetched_at "
+        "WHERE first_seen IS NULL AND fetched_at IS NOT NULL"
+    )
     conn.commit()
 
 
@@ -424,13 +462,19 @@ def crawl_index(client: MySchemeClient, conn: sqlite3.Connection,
                 f.get("briefDescription"),
                 f"https://www.myscheme.gov.in/schemes/{slug}",
                 _now(),
+                _now(),          # first_seen — on insert only; see below
             ))
 
+        # `first_seen` is deliberately absent from the DO UPDATE SET. That
+        # omission is the feature: re-crawling a scheme we already hold must not
+        # reset the date it arrived, or every scheme becomes "new" on every
+        # ingest and the change-alert layer messages everybody about everything.
         conn.executemany(
             """
             INSERT INTO schemes (slug, scheme_id, name, short_title, level, state,
-                                 ministry, categories, tags, brief, official_url, fetched_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                                 ministry, categories, tags, brief, official_url,
+                                 fetched_at, first_seen)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON CONFLICT(slug) DO UPDATE SET
                 scheme_id=excluded.scheme_id, name=excluded.name,
                 short_title=excluded.short_title, level=excluded.level,
@@ -603,6 +647,22 @@ def parse_structured_eligibility(criteria: dict) -> dict:
     }
 
 
+def eligibility_hash(parsed: dict) -> str:
+    """A stable fingerprint of the structured eligibility.
+
+    Used to notice that a criterion moved — an income ceiling raised, an age band
+    widened — without keeping a second copy of a 285 MB corpus to diff against.
+    Sorted keys and a canonical separator so the hash tracks the VALUES and not
+    the order a dict happened to be built in; `fetched_at` is excluded, or every
+    re-crawl would look like a change.
+    """
+    canonical = json.dumps(
+        {k: parsed[k] for k in sorted(parsed) if k != "fetched_at"},
+        sort_keys=True, separators=(",", ":"), default=str,
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()[:32]
+
+
 def store_eligibility(conn: sqlite3.Connection, slug: str, parsed: dict) -> None:
     cols = list(parsed.keys())
     conn.execute(
@@ -611,6 +671,12 @@ def store_eligibility(conn: sqlite3.Connection, slug: str, parsed: dict) -> None
             ON CONFLICT(slug) DO UPDATE SET
               {', '.join(f'{c}=excluded.{c}' for c in cols)}, fetched_at=excluded.fetched_at""",
         [slug] + [parsed[c] for c in cols] + [_now()],
+    )
+    # Kept on `schemes` rather than `scheme_eligibility` so the alert diff is one
+    # table scan over the same row it already reads for `first_seen`.
+    conn.execute(
+        "UPDATE schemes SET eligibility_hash = ? WHERE slug = ?",
+        (eligibility_hash(parsed), slug),
     )
 
 

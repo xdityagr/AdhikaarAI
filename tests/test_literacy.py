@@ -159,9 +159,20 @@ class TestWhyNot:
 
 class TestDisclosures:
     def test_fraud_shield_states_the_government_charges_nothing(self):
-        out = format_fraud_shield()
-        assert "never charges a fee" in out
+        """Asserts the claim, not the sentence.
+
+        The wording widened from "NSFDC never charges a fee" to cover every
+        scheme once this stopped being a credit tool, and the old assertion
+        pinned the exact phrase — so a copy change that strengthened the
+        promise failed a test named for the promise. What must hold is that
+        the line says no fee is charged, names it as fraud, and says free.
+        """
+        out = format_fraud_shield().lower()
+        assert "charges a fee" in out
+        assert "fraud" in out
         assert "free" in out
+        # The claim has to be about government schemes generally, not one lender.
+        assert "no government scheme" in out
 
     def test_priority_note_only_for_women_on_priority_schemes(self):
         priority = {"women": 0.40}

@@ -298,12 +298,17 @@ STRINGS: dict[str, dict[str, str]] = {
     "cheapest": {"en": "Lowest cost", "hi": "सबसे सस्ती", "mr": "सर्वात स्वस्त", "bn": "সবচেয়ে সস্তা", "ta": "மிகக் குறைந்த செலவு"},
 
     # ---- trust ----
+    # Widened from "NSFDC never charges" once this stopped being a credit tool.
+    # The claim is still exactly true of every scheme in the corpus, and the fee
+    # charged for knowing which scheme exists is the thing this product is
+    # against — so the warning belongs on a pension and a scholarship too, not
+    # only on a loan.
     "fraud_shield": {
-        "en": "NSFDC never charges a fee to apply. If anyone asks you for money to process your loan, that is fraud.",
-        "hi": "NSFDC आवेदन के लिए कोई शुल्क नहीं लेता। अगर कोई आपसे ऋण पास कराने के नाम पर पैसे माँगे, तो वह धोखाधड़ी है।",
-        "mr": "NSFDC अर्जासाठी कोणतेही शुल्क घेत नाही. कर्ज मंजूर करण्यासाठी कोणी पैसे मागत असेल, तर ती फसवणूक आहे.",
-        "bn": "NSFDC আবেদনের জন্য কোনও ফি নেয় না। ঋণ পাশ করানোর নামে কেউ টাকা চাইলে সেটি প্রতারণা।",
-        "ta": "NSFDC விண்ணப்பத்திற்குக் கட்டணம் வசூலிப்பதில்லை. கடன் அனுமதிக்க யாரேனும் பணம் கேட்டால், அது மோசடி.",
+        "en": "No government scheme charges a fee to apply. If anyone asks you for money to process or approve your application, that is fraud.",
+        "hi": "किसी भी सरकारी योजना में आवेदन का कोई शुल्क नहीं होता। अगर कोई आपसे आवेदन पास कराने के नाम पर पैसे माँगे, तो वह धोखाधड़ी है।",
+        "mr": "कोणतीही सरकारी योजना अर्जासाठी शुल्क घेत नाही. अर्ज मंजूर करण्यासाठी कोणी पैसे मागत असेल, तर ती फसवणूक आहे.",
+        "bn": "কোনও সরকারি প্রকল্পে আবেদনের ফি লাগে না। আবেদন পাশ করানোর নামে কেউ টাকা চাইলে সেটি প্রতারণা।",
+        "ta": "எந்த அரசுத் திட்டமும் விண்ணப்பிக்கக் கட்டணம் வசூலிப்பதில்லை. விண்ணப்பத்தை அனுமதிக்க யாரேனும் பணம் கேட்டால், அது மோசடி.",
     },
     "estimates_note": {
         "en": "These are estimates. Final terms are set by the office you apply to.",
