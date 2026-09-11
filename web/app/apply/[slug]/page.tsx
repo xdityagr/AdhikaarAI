@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { ApplicationPack } from "@/components/application-pack";
+import { DocumentReadiness } from "@/components/document-readiness";
+import { splitRequirements } from "@/lib/documents";
 import { getScheme } from "@/lib/api";
 import { getLang, getT } from "@/lib/i18n/server";
 import { translator } from "@/lib/i18n";
@@ -41,6 +43,7 @@ export default async function ApplyPage({
   const [lang, t] = await Promise.all([getLang(), getT()]);
   const scheme = await getScheme(slug, lang);
   if (!scheme) notFound();
+  const requirements = splitRequirements(scheme.documents_md);
 
   return (
     <article className="mx-auto max-w-3xl px-5 py-8 sm:px-6 sm:py-12">
@@ -62,9 +65,21 @@ export default async function ApplyPage({
         ) : null}
       </header>
 
-      <div className="mt-8">
+      <div className="mt-8 space-y-6">
         <ApplicationPack slug={slug} />
+
+        {/*
+          The checklist belongs here, not only on /documents.
+          "Which papers do I need?" is asked at exactly this moment — while
+          reading the form you are about to carry somewhere — and making someone
+          navigate to a separate page to find out is how they arrive at a
+          counter without a caste certificate.
+        */}
+        {requirements.length ? (
+          <DocumentReadiness slug={slug} requirements={requirements} />
+        ) : null}
       </div>
     </article>
   );
 }
+

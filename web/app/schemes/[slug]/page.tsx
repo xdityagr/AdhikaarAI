@@ -157,6 +157,32 @@ export default async function SchemePage({
           </div>
 
           {/*
+            The step that was missing entirely.
+
+            /apply/[slug] has existed for a while and the only link to it was
+            inside the chat panel, so a person reading a scheme page had no way
+            to say "this one — I want it". They could check whether they
+            qualified and they could ask a question, and then the page ended.
+            This is the door out of reading and into doing, and it carries the
+            document checklist with it, which is the thing that decides whether
+            a trip to an office is wasted.
+          */}
+          <div className="card-quiet p-5">
+            <h2 className="text-sm font-semibold">{t("scheme.apply.title")}</h2>
+            <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+              {t("scheme.apply.body")}
+            </p>
+            <ButtonLink
+              href={`/apply/${encodeURIComponent(scheme.slug)}`}
+              size="pill"
+              className="mt-4 w-full"
+            >
+              <FileText className="size-4" />
+              {t("scheme.apply.cta")}
+            </ButtonLink>
+          </div>
+
+          {/*
             The page answers what the government wrote down. This answers
             everything else — and carries the scheme with it, so nobody has to
             retype a fifteen-word official title to ask about it.
