@@ -222,6 +222,21 @@ class TestDefiniteMismatch:
         wide = next(m for m in result.matches if m.slug == "any-age")
         assert "age" not in wide.unknown
 
+    def test_near_misses_are_the_nearest_ones(self, corpus):
+        """"Near miss" has to mean near.
+
+        The list used to be whatever the scan reached first in corpus order, so
+        a scheme missed by one criterion lost its place to one missed by four.
+        The PS asks for near misses precisely so the person can act on them, and
+        a scheme they failed on four counts is not something anyone can act on.
+        """
+        result = discover(Facets(caste="sc", state="Bihar", age=30),
+                          limit=100, corpus_path=corpus)
+        assert result.not_matched
+        counts = [len(m.unmet) for m in result.not_matched]
+        assert counts == sorted(counts), "near misses are not ordered by nearness"
+        assert counts[0] >= 1                  # a near miss is still a miss
+
     def test_flag_requirement_excludes_when_user_says_no(self, corpus):
         result = discover(Facets(is_bpl=False), limit=100, corpus_path=corpus)
         assert "bpl-only" not in names(result)

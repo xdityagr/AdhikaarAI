@@ -584,6 +584,16 @@ def discover(
 
     result.matches.sort(key=lambda m: (-m.relevance, m.name))
     result.matches = result.matches[:limit]
+
+    # NEAR misses, not merely the first ten misses.
+    #
+    # This used to take whatever the scan reached first, in corpus order, which
+    # meant a scheme missed by a single criterion lost its place to one missed by
+    # four. The PS asks for the opposite — "for near misses, state precisely what
+    # disqualified them" — and precision is only useful when the scheme was close
+    # enough that the person can do something about it. Fewest unmet first, then
+    # the one that matched the most about them.
+    result.not_matched.sort(key=lambda m: (len(m.unmet), -len(m.matched_on), m.name))
     result.not_matched = result.not_matched[:10]
     return result
 
