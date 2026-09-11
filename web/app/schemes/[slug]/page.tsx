@@ -33,10 +33,18 @@ export async function generateMetadata({
 
 export default async function SchemePage({
   params,
+  searchParams,
 }: {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ from?: string }>;
 }) {
   const { slug } = await params;
+  // Someone who arrived from the eligibility check has just answered those
+  // questions. Offering them "Check my eligibility" as the first thing on the
+  // page is the product failing to remember the conversation it has just had,
+  // and it pushes the step they actually want — applying — below it.
+  const { from } = await searchParams;
+  const alreadyChecked = from === "check";
 
   // The language decides WHAT is fetched, not just how it is labelled:
   // myScheme publishes its own translations and we hold about 4,730 schemes
@@ -142,6 +150,7 @@ export default async function SchemePage({
         </div>
 
         <aside className="space-y-4 lg:sticky lg:top-24 lg:self-start">
+          {alreadyChecked ? null : (
           <div className="card-quiet p-5">
             <h2 className="text-sm font-semibold">{t("scheme.qualify.title")}</h2>
             <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -155,6 +164,7 @@ export default async function SchemePage({
               {t("scheme.qualify.cta")}
             </ButtonLink>
           </div>
+          )}
 
           {/*
             The step that was missing entirely.

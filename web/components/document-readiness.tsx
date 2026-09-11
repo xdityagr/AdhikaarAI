@@ -6,13 +6,11 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
-import { Camera, Check, Loader2, ScanLine } from "lucide-react";
+import { Camera, Check, Loader2 } from "lucide-react";
 
-import { AadhaarScan, ScanResult } from "@/components/aadhaar-scan";
 import { DocumentCapture } from "@/components/document-capture";
 import { useLanguage } from "@/components/language-provider";
 import { Button } from "@/components/ui/button";
-import { saveProfile, type Profile } from "@/lib/profile";
 
 /**
  * "Have I got everything?" — the question people ask at the door, answered
@@ -247,67 +245,6 @@ export function DocumentReadiness({
           </Button>
         )}
       </div>
-    </section>
-  );
-}
-
-/**
- * The Aadhaar scanner, given a home of its own.
- *
- * It used to exist only inside the profile sheet, reachable from `/me` and
- * nowhere else — which meant the fastest way to fill eleven fields was hidden
- * behind the page you would only open once those fields were already filled.
- * Here it sits next to the document checklist, which is where someone gathering
- * their papers is actually looking.
- *
- * Its promise is unchanged and still true: the QR is decoded in this browser
- * and only the decoded text is sent. That is a different promise from the one
- * the checklist above makes, and the two are deliberately not blurred together.
- */
-export function AadhaarPanel() {
-  const { t } = useLanguage();
-  const [scanning, setScanning] = useState(false);
-  const [result, setResult] = useState<{ verified: boolean; last4: string } | null>(
-    null,
-  );
-
-  const onFilled = useCallback(
-    (profile: Profile, verified: boolean, last4: string) => {
-      saveProfile(profile);
-      setResult({ verified, last4 });
-      setScanning(false);
-    },
-    [],
-  );
-
-  return (
-    <section className="rounded-2xl border border-hairline bg-card p-5">
-      <h2 className="font-display text-lg font-medium">{t("aadhaar.title")}</h2>
-      <p className="mt-1 text-[0.8125rem] leading-relaxed text-muted-foreground">
-        {t("aadhaar.privacy")}
-      </p>
-
-      <div className="mt-4">
-        {scanning ? (
-          <AadhaarScan onFilled={onFilled} onClose={() => setScanning(false)} />
-        ) : (
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full"
-            onClick={() => setScanning(true)}
-          >
-            <ScanLine className="size-4" />
-            {t("profile.scan")}
-          </Button>
-        )}
-      </div>
-
-      {result ? (
-        <div className="mt-3">
-          <ScanResult verified={result.verified} last4={result.last4} />
-        </div>
-      ) : null}
     </section>
   );
 }

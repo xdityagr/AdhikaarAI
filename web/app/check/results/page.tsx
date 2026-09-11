@@ -174,7 +174,7 @@ export default async function ResultsPage({
                 className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/40 px-4 py-3"
               >
                 <Link
-                  href={`/schemes/${match.slug}`}
+                  href={`/schemes/${match.slug}?from=check`}
                   className="text-sm font-medium hover:text-primary"
                 >
                   {match.name.trim()}
@@ -218,7 +218,7 @@ function FocusVerdict({
         {tr("results.focus.title")}
       </p>
       <h2 className="mt-2 font-display text-[1.5rem] font-normal">
-        <Link href={`/schemes/${verdict.slug}`} className="hover:underline">
+        <Link href={`/schemes/${verdict.slug}?from=check`} className="hover:underline">
           {verdict.name}
         </Link>
       </h2>
@@ -302,7 +302,7 @@ function MatchCard({ match }: { match: DiscoveryMatch }) {
       </div>
 
       <h3 className="mt-3 font-semibold leading-snug">
-        <Link href={`/schemes/${match.slug}`} className="hover:text-primary">
+        <Link href={`/schemes/${match.slug}?from=check`} className="hover:text-primary">
           <span className="absolute inset-0" aria-hidden />
           {match.name.trim()}
         </Link>
