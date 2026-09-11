@@ -196,7 +196,7 @@ def render_cards(cards: list[dict]) -> str:
     return "\n".join(lines)
 
 
-def _resume_from_web(user_id: str, text: str) -> str:
+async def _resume_from_web(user_id: str, text: str) -> str:
     """Redeem a handoff code, and return the message without it.
 
     Silent when there is no code, and silent when the code is stale or already
@@ -207,7 +207,7 @@ def _resume_from_web(user_id: str, text: str) -> str:
     if not code:
         return text
 
-    entry = handoff.claim(code)
+    entry = await handoff.claim(code)
     if entry is None:
         logger.info("Handoff code from %s was unknown or expired", user_id[:8])
         return handoff.strip(text, code)
@@ -247,7 +247,7 @@ async def reply(user_id: str, text: str) -> str:
     # message. Someone who answered six questions on the site and then crossed
     # over must not be asked which state they live in — being asked again is
     # the clearest possible signal that nobody was listening.
-    text = _resume_from_web(user_id, text)
+    text = await _resume_from_web(user_id, text)
 
     language = remember_language(user_id, text)
 
