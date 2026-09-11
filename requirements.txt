@@ -27,3 +27,10 @@ langgraph-checkpoint-sqlite>=2.0
 # else's transitive dependency.
 langchain-core>=1.0
 lxml>=5.0
+
+# Postgres, used only when DATABASE_URL is set — see src/dialect.py. SQLite is
+# still the default and is what tests and a laptop use; this exists because a
+# free Render container has an ephemeral filesystem, so the opt-out table would
+# be erased on every deploy and we would be back to messaging people who asked
+# us to stop. The binary wheel avoids needing libpq and a compiler in the image.
+psycopg[binary]>=3.2
