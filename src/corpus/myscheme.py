@@ -289,6 +289,17 @@ def connect(db_path: Path = DB_PATH) -> sqlite3.Connection:
 #: beginning of a migration system.
 _ADDED_COLUMNS: dict[str, list[tuple[str, str]]] = {
     "schemes": [("first_seen", "TEXT"), ("eligibility_hash", "TEXT")],
+    # Land, read out of the eligibility prose by `src.corpus.land` — the one
+    # dimension the PS names that myScheme publishes nowhere as a field. The
+    # evidence column holds the sentence each figure came from, so any single
+    # decision can be checked against the source by eye rather than trusted.
+    "scheme_eligibility": [
+        ("land_min_acres", "REAL"),
+        ("land_max_acres", "REAL"),
+        ("land_landless_required", "INTEGER"),
+        ("land_unquantified", "INTEGER"),
+        ("land_evidence", "TEXT"),          # JSON array of sentences
+    ],
 }
 
 

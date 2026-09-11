@@ -321,6 +321,19 @@ STRINGS: dict[str, dict[str, str]] = {
         "ta": "உங்கள் குடும்பத்தின் ஆண்டு வருமானம் தோராயமாக எவ்வளவு? மதிப்பீடே போதும்.",
     },
 
+    "ask_land": {
+        "en": "How much farmland do you own? A rough figure is fine, and owning none is an answer that opens schemes of its own.",
+        "hi": "आपके पास कितनी खेती की ज़मीन है? अंदाज़ा ही काफ़ी है — और ज़मीन न होना भी एक जवाब है, जिससे अपनी अलग योजनाएँ खुलती हैं।",
+        "mr": "तुमच्याकडे किती शेतजमीन आहे? अंदाज पुरेसा आहे — आणि जमीन नसणे हेही एक उत्तर आहे, ज्याने वेगळ्या योजना उघडतात.",
+        "bn": "আপনার কত চাষের জমি আছে? আন্দাজই যথেষ্ট — আর জমি না থাকাও একটা উত্তর, তাতে আলাদা প্রকল্প খোলে।",
+        "ta": "உங்களிடம் எவ்வளவு விவசாய நிலம் உள்ளது? தோராயமே போதும் — நிலம் இல்லாததும் ஒரு பதில், அதற்கெனத் தனித் திட்டங்கள் உண்டு.",
+    },
+    "opt_land_0": {
+        "en": "None — I don't own land", "hi": "कोई नहीं — मेरे पास ज़मीन नहीं है",
+        "mr": "काहीही नाही — माझ्याकडे जमीन नाही", "bn": "নেই — আমার জমি নেই",
+        "ta": "இல்லை — எனக்கு நிலம் இல்லை",
+    },
+
     # Offered on every adaptive question. Declining costs precision and never a
     # scheme, and the label has to say so or nobody dares skip the awkward ones.
     "opt_skip": {
