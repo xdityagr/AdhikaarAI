@@ -79,6 +79,9 @@ class Facets:
     marital_status: Optional[str] = None
     is_gov_employee: Optional[bool] = None
     is_economic_distress: Optional[bool] = None
+    #: Land held, in acres. Read out of prose by `src.corpus.land`, so it is the
+    #: only facet whose corpus side was extracted rather than published.
+    land_acres: Optional[float] = None
     categories: list[str] = field(default_factory=list)
 
 
@@ -136,6 +139,15 @@ def open_corpus(path: Path = CORPUS_PATH) -> Optional[sqlite3.Connection]:
     conn = sqlite3.connect(f"file:{path}?mode=ro", uri=True)
     conn.row_factory = sqlite3.Row
     return conn
+
+
+def _has_land_columns(conn: sqlite3.Connection) -> bool:
+    """Whether this corpus was built after the land extraction pass."""
+    try:
+        columns = {row[1] for row in conn.execute("PRAGMA table_info(scheme_eligibility)")}
+    except sqlite3.Error:
+        return False
+    return "land_max_acres" in columns
 
 
 def _load_facet_index(conn: sqlite3.Connection) -> dict[str, dict[str, set[str]]]:
@@ -327,6 +339,56 @@ def _check_income(row: sqlite3.Row, income: Optional[float],
     return True
 
 
+def _check_land(row: sqlite3.Row, acres: Optional[float],
+                match: DiscoveryMatch) -> bool:
+    """Land holding — the one PS-named dimension myScheme publishes as prose.
+
+    The figures come from `src.corpus.land`, which extracts only what it can read
+    unambiguously and flags the rest. Three outcomes, and the third is the
+    interesting one:
+
+    - a ceiling or a floor we read: compare, and exclude on a definite mismatch
+    - nothing found: silent, so absence is not negation, as everywhere else
+    - `land_unquantified`: the scheme HAS a land condition we could not turn into
+      a number — a figure in bighas, or two conditional ceilings. That must never
+      exclude anyone, and it must not be silent either, or someone travels to an
+      office to be turned away by a rule we had read and swallowed. It goes into
+      `unknown`, which is how this codebase already says "check this yourself".
+    """
+    keys = row.keys()
+    if "land_max_acres" not in keys:
+        return True                       # corpus predates the extraction pass
+
+    low, high = row["land_min_acres"], row["land_max_acres"]
+    landless = row["land_landless_required"]
+    unreadable = row["land_unquantified"]
+
+    if not (low is not None or high is not None or landless or unreadable):
+        return True
+
+    if acres is None:
+        match.unknown.append("land")
+        return True
+
+    if landless and acres > 0:
+        match.unmet.append("land")
+        return False
+    if high is not None and acres > high:
+        match.unmet.append("land")
+        return False
+    if low is not None and acres < low:
+        match.unmet.append("land")
+        return False
+
+    if unreadable and low is None and high is None and not landless:
+        # We know there is a rule and not what it says. Say so.
+        match.unknown.append("land")
+        return True
+
+    match.matched_on.append("land")
+    return True
+
+
 #: myScheme spells "no upper limit" as 100 and "no lower limit" as 0, so a band
 #: of 0–100 is not a band at all. 327 schemes carry exactly that.
 _AGE_FLOOR = 0
@@ -372,7 +434,7 @@ def _check_age(row: sqlite3.Row, age: Optional[int], match: DiscoveryMatch) -> b
 # Facets that signal a scheme is *targeted* at a marginalised group. A scheme
 # naming these and matching the user should outrank a generic national one.
 _TARGETING = {"caste", "BPL", "disability", "minority", "occupation",
-              "economic distress"}
+              "economic distress", "land"}
 
 
 def score(match: DiscoveryMatch, facets: Facets) -> float:
@@ -440,11 +502,20 @@ def discover(
         return result
 
     try:
+        # The land columns exist only in a corpus built after the extraction
+        # pass. Naming them unconditionally makes every query fail against an
+        # older release — and the corpus is pinned by tag, so an older release
+        # is a completely normal thing to be running against. `_check_land`
+        # already tolerates their absence; the SELECT has to as well.
+        have_land = _has_land_columns(conn)
+        land_columns = (""",
+                      e.land_min_acres, e.land_max_acres,
+                      e.land_landless_required, e.land_unquantified""" if have_land else "")
         rows = conn.execute(
-            """SELECT s.slug, s.name, s.level, s.state, s.categories, s.brief,
+            f"""SELECT s.slug, s.name, s.level, s.state, s.categories, s.brief,
                       s.eligibility_md,
                       e.family_income_min, e.family_income_max,
-                      e.age_min, e.age_max
+                      e.age_min, e.age_max{land_columns}
                FROM schemes s
                LEFT JOIN scheme_eligibility e ON e.slug = s.slug"""
         ).fetchall()
@@ -479,6 +550,7 @@ def discover(
         checks += [
             _check_income(row, facets.family_income, match),
             _check_age(row, facets.age, match),
+            _check_land(row, facets.land_acres, match),
         ]
 
         # A state-specific scheme only serves its own state.

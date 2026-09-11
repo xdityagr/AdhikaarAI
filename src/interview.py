@@ -49,6 +49,7 @@ nothing at all.
 from __future__ import annotations
 
 import logging
+import re
 import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
@@ -193,6 +194,15 @@ QUESTIONS: tuple[Question, ...] = (
         fallback_prompt="Do you belong to a minority community?",
     ),
     Question(
+        id="land", facet_field="land_acres", probe="land", input="number",
+        targeting=True,
+        options=(Option("0", "None — I don't own land"),
+                 Option("0.5", "Under 1 acre"), Option("1.5", "1–2 acres"),
+                 Option("3.5", "2–5 acres"), Option("8", "More than 5 acres")),
+        fallback_prompt="How much farmland do you own? A rough figure is fine, and "
+                        "owning none is an answer that opens schemes of its own.",
+    ),
+    Question(
         id="income", facet_field="family_income", probe="income", input="amount",
         options=(Option("60000", "Under ₹1 lakh"),
                  Option("150000", "₹1–2 lakh"),
@@ -255,6 +265,20 @@ def _build(corpus_path: Path) -> None:
                       OR individual_income_max IS NOT NULL
                       OR parent_income_max IS NOT NULL""")
         }
+        # Land, extracted from prose by `src.corpus.land`. Guarded because a
+        # corpus published before that pass has no such columns and asking would
+        # raise on the first turn of every conversation.
+        try:
+            restricts["land"] = {
+                row[0] for row in conn.execute(
+                    """SELECT slug FROM scheme_eligibility
+                       WHERE land_min_acres IS NOT NULL
+                          OR land_max_acres IS NOT NULL
+                          OR land_landless_required = 1
+                          OR land_unquantified = 1""")
+            }
+        except sqlite3.OperationalError:
+            restricts["land"] = set()
     finally:
         conn.close()
     _INDEX, _RESTRICTS = index, restricts
@@ -275,6 +299,12 @@ def reset_cache() -> None:
 # ---------------------------------------------------------------------------
 # Selection
 # ---------------------------------------------------------------------------
+
+def lowered_words(text: str) -> set[str]:
+    """Words of an answer, lowercased. Small enough to inline, named because
+    `coerce` reads better when the intent is stated than when it is punctuation."""
+    return set(re.findall(r"[a-z]+", text.lower()))
+
 
 def _key(question: Question) -> str:
     return question.probe or question.identifier or question.id
@@ -345,6 +375,19 @@ def coerce(question: Question, raw: str) -> Optional[Any]:
     text = (raw or "").strip()
     if not text:
         return None
+
+    if question.probe == "land":
+        # Zero is a real answer here and a meaningful one — landless households
+        # are named by schemes of their own — so this cannot reuse the age
+        # parser, which reads "0" as no answer and "0.5" as five.
+        match = re.search(r"\d+(?:\.\d+)?", text)
+        if match is None:
+            if any(word in lowered_words(text)
+                   for word in ("none", "no", "nil", "landless", "nothing")):
+                return 0.0
+            return None
+        acres = float(match.group())
+        return acres if 0 <= acres < 10_000 else None
 
     if question.probe == "age" or question.input == "number":
         digits = "".join(ch for ch in text if ch.isdigit())
