@@ -22,6 +22,9 @@ const NAV = [
   // check and every application form read from it, so it needs to be
   // reachable rather than something you find by accident.
   { href: "/me", key: "nav.me" },
+  // The unit people actually search on. It sits next to "About you" because
+  // it is the same question asked of everyone else in the house.
+  { href: "/household", key: "nav.household" },
   { href: "/chat", key: "nav.chat" },
 ] as const;
 
