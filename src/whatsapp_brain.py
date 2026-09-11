@@ -21,6 +21,7 @@ shows literal asterisks to someone who may already be reading with difficulty.
 
 from __future__ import annotations
 
+import json
 import logging
 import re
 from collections import defaultdict, deque
@@ -241,7 +242,16 @@ async def reply(user_id: str, text: str) -> str:
         if gate:
             _HISTORY.pop(user_id, None)
             _CONTEXT.pop(user_id, None)
+            # And erase the stored copy. Clearing only the in-memory dict would
+            # have meant the next message reloaded everything we had been asked
+            # to forget.
+            await forget(user_id)
         return gate
+
+    # What we already know about this number, whichever channel taught us —
+    # so nobody is asked their state a second time because they moved from the
+    # website to WhatsApp, or from WhatsApp to a phone call.
+    await load_context(user_id)
 
     # A code from the website, redeemed before anything else looks at the
     # message. Someone who answered six questions on the site and then crossed
@@ -260,21 +270,100 @@ async def reply(user_id: str, text: str) -> str:
         _CONTEXT[user_id]["greeted"] = True
         footer = f"\n\n{consent.notice(language)}"
 
+    answer = ""
     if agent_available():
         answer = await _agent_reply(user_id, text, language)
-        if answer:
-            return _clip(answer) + footer
-        # The agent stood aside — no key, or every model's quota is spent. The
-        # scripted flow still works, and a person mid-question should not be
-        # told to come back tomorrow.
-        logger.info("Agent unavailable for %s, falling back to the script", user_id[:8])
+        if not answer:
+            # The agent stood aside — no key, or every model's quota is spent.
+            # The scripted flow still works, and a person mid-question should
+            # not be told to come back tomorrow.
+            logger.info("Agent unavailable for %s, falling back to the script",
+                        user_id[:8])
+    if not answer:
+        answer = await _scripted_reply(user_id, text, language)
 
-    return _clip(await _scripted_reply(user_id, text, language)) + footer
+    # Write down what this turn taught us, on both paths. Saving inside each
+    # branch would eventually mean saving in one and forgetting in the other.
+    await save_context(user_id)
+    return _clip(answer) + footer
 
 
 # Bookkeeping that belongs to this module, not to the model. Sending it would
 # put "last_options" in the prompt as though it were a fact about the person.
 _PRIVATE_CONTEXT_KEYS = {"last_options", "language"}
+
+# Kept in memory and never written down. `pending_map` is a URL that expires in
+# an hour and `last_options` is the chips from one message — persisting either
+# would store rubbish and, worse, restore a stale "reply 2 for the second one"
+# to somebody whose conversation moved on days ago.
+#
+# `language`, `greeted` and everything carried from the website are the opposite:
+# they are what "it remembered me" is made of.
+_EPHEMERAL_CONTEXT_KEYS = {"last_options", "pending_map"}
+
+#: Numbers whose stored context has already been read this process.
+_LOADED: set[str] = set()
+
+
+async def load_context(user_id: str) -> None:
+    """Bring back what we know about this number, once per process.
+
+    Lazy rather than loaded at startup: this table grows with every person who
+    ever wrote to us, and the overwhelming majority are not in this
+    conversation. One read on their first message of the day is cheap.
+    """
+    if user_id in _LOADED:
+        return
+    _LOADED.add(user_id)
+    try:
+        from src.database import get_connection, load_context as read
+        db = await get_connection()
+        try:
+            raw = await read(db, user_id)
+        finally:
+            await db.close()
+        if raw:
+            stored = json.loads(raw)
+            # Anything learned in THIS process wins: it is newer than the row.
+            merged = {**stored, **_CONTEXT[user_id]}
+            _CONTEXT[user_id].update(merged)
+    except Exception:
+        logger.warning("Could not load what we know about %s",
+                       user_id[:10] + "…", exc_info=True)
+
+
+async def save_context(user_id: str) -> None:
+    """Write down the durable half of what we know."""
+    durable = {k: v for k, v in _CONTEXT.get(user_id, {}).items()
+               if k not in _EPHEMERAL_CONTEXT_KEYS and v not in (None, "", [])}
+    if not durable:
+        return
+    try:
+        from src.database import get_connection, save_context as write
+        db = await get_connection()
+        try:
+            await write(db, user_id, json.dumps(durable, default=str))
+        finally:
+            await db.close()
+    except Exception:
+        logger.warning("Could not save what we know about %s",
+                       user_id[:10] + "…", exc_info=True)
+
+
+async def forget(user_id: str) -> None:
+    """Erase everything. Called on STOP, because "leave me alone" cannot mean
+    "we will stop writing but keep what we have"."""
+    _LOADED.discard(user_id)
+    try:
+        from src.database import get_connection, forget_context
+        db = await get_connection()
+        try:
+            await forget_context(db, user_id)
+        finally:
+            await db.close()
+    except Exception:
+        logger.warning("Could not erase context for %s", user_id[:10] + "…",
+                       exc_info=True)
 
 
 def _agent_context(user_id: str) -> dict:
