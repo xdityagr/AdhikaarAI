@@ -1,0 +1,83 @@
+# Render Blueprint for the Adhikaar AI engine.
+#
+# The front end is not here. It goes to Vercel, which proxies /api/* to this
+# service through a Next rewrite — so the browser only ever talks to one
+# origin, there is no CORS to configure, and this URL never appears in client
+# code. See DEPLOY.md.
+
+services:
+  - type: web
+    name: adhikaar-api
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    region: singapore          # closest Render region to India
+    plan: free
+
+    healthCheckPath: /health
+
+    envVars:
+      # ---- the catalogue build ------------------------------------------
+      # There is no `dockerBuildArgs` in a Blueprint. Render translates a
+      # Docker service's environment variables into build arguments on its
+      # own, so these reach the Dockerfile's ARG instructions from here.
+      #
+      # Bump the tag when the catalogue is re-ingested and re-published.
+      # Pinning is what makes a deployment reproducible; `corpus-latest` would
+      # let the data change underneath a running service with nothing to show
+      # for it.
+      - key: CORPUS_TAG
+        value: corpus-2026-09-08
+      - key: CORPUS_REPO
+        value: xdityagr/AdhikaarAI
+
+      # ---- where things live -------------------------------------------
+      # The catalogue is baked into the image at /catalogue, never written to.
+      # (ADHIKAAR_CORPUS_DIR is a different setting — leave it unset.)
+      - key: ADHIKAAR_CATALOGUE_DIR
+        value: /catalogue
+      # State — opt-outs, message idempotency, the geocoding cache. On the free
+      # plan this is the container's own filesystem and does NOT survive a
+      # deploy or a spin-down. Attach the disk below to fix that.
+      - key: ADHIKAAR_STATE_DIR
+        value: /data
+
+      # The one route the browser reaches directly. An agent turn takes about
+      # twenty seconds and Vercel's Hobby plan cuts a response at ten, so the
+      # trace arrived and the answer never did. Set this to the Vercel origin,
+      # comma-separated if there is more than one. Named origins only.
+      - key: ADHIKAAR_ALLOWED_ORIGINS
+        sync: false
+
+      # ---- secrets: set these in the Render dashboard, not here ---------
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: SARVAM_API_KEY
+        sync: false
+      - key: DEEPGRAM_API_KEY
+        sync: false
+      - key: WHATSAPP_SAT
+        sync: false
+      - key: WHATSAPP_APP_SECRET
+        sync: false
+      - key: WHATSAPP_VERIFY_TOKEN
+        sync: false
+      - key: WHATSAPP_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+        sync: false
+
+      - key: WEBHOOK_BASE_URL
+        sync: false          # the https://…onrender.com URL, once it exists
+      - key: WEBHOOK_VERIFY_SIGNATURES
+        value: "true"
+
+    # ---- persistence ---------------------------------------------------
+    # Uncomment on a paid instance. Without it the state directory is
+    # ephemeral: a redeploy or a spin-down forgets who sent STOP, and someone
+    # who opted out of WhatsApp gets messaged again. That is the one data loss
+    # here that is not merely inconvenient.
+    #
+    # disk:
+    #   name: adhikaar-state
+    #   mountPath: /data
+    #   sizeGB: 1

@@ -1,0 +1,45 @@
+[project]
+name = "adhikaar"
+version = "0.1.0"
+description = "AI-Driven Scheme Matching for NSFDC Credit Schemes — SIH26092"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.115",
+    "uvicorn[standard]>=0.34",
+    "twilio>=9.0",
+    "langgraph>=0.4",
+    "langgraph-checkpoint-sqlite>=2.0",
+    "aiosqlite>=0.21",
+    "python-dotenv>=1.1",
+    "pydantic>=2.10",
+    "pydantic-settings>=2.7",
+    "httpx>=0.28",
+    "langchain-google-genai>=4.0.0",
+    # --- corpus ingest (runtime: scheduled refresh, never on the request path) ---
+    "pandas>=2.2",
+    "openpyxl>=3.1",
+    "xlrd>=2.0",          # legacy .xls — endemic on Indian government sites, openpyxl can't read it
+    "pdfplumber>=0.11",   # NSFDC publishes utilisation and the partner directory as PDF only
+    "selectolax>=0.3",
+    # --- map rendering ---
+    "Pillow>=10.0",
+    "python-multipart>=0.0.20",
+    "cryptography>=44.0",
+    "lxml>=5.0",
+    "langchain-core>=1.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.25",
+    "pytest-httpx>=0.35",
+]
+
+[build-system]
+requires = ["setuptools>=68.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]

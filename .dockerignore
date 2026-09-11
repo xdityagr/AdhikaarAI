@@ -1,0 +1,26 @@
+# The corpus is fetched from a Release at build time, not copied from here —
+# sending 283 MB of build context to the daemon on every build is the slowest
+# possible way to get a file the image already downloads.
+data/
+web/
+.next/
+node_modules/
+
+.git/
+.github/
+.venv/
+venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.superpowers/
+
+# Never. The image reads its configuration from the environment.
+.env
+src/.env
+*.env
+
+tests/
+docs/
+*.md
+!README.md

@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#2B3A8C">
+<title>Adhikaar AI</title>
+<link rel="stylesheet" href="/assets/adhikaar.css">
+</head>
+<body>
+
+<!-- ===================== SPLASH ===================== -->
+<div class="splash" id="splash">
+  <div class="splash-in">
+    <div class="logo">अ</div>
+    <h1 id="sp-title">Find the loan you<br>already qualify for.</h1>
+    <p class="tag" id="sp-tag">Government loans, explained plainly</p>
+
+    <div class="lang-label" id="sp-pick">Choose your language</div>
+    <div class="lang-grid" id="langs"></div>
+
+    <button class="btn lg" id="begin">Start</button>
+    <div class="fine" id="sp-fine">Free. No sign-up. Takes about a minute.</div>
+  </div>
+</div>
+
+<!-- ====================== CHAT ====================== -->
+<div class="app" id="app" hidden>
+  <header class="topbar">
+    <div class="mark">अ</div>
+    <div class="who">Adhikaar AI<small id="tb-sub">NSFDC scheme finder</small></div>
+    <div class="spacer"></div>
+    <button class="icon-btn" id="lang-btn">हिन्दी</button>
+    <button class="icon-btn" id="restart">↻</button>
+  </header>
+
+  <main class="stream" id="stream">
+    <div class="stream-in" id="feed"></div>
+  </main>
+
+  <div class="dock">
+    <div class="dock-in">
+      <div class="chips" id="chips"></div>
+      <form class="composer" id="composer">
+        <input id="entry" autocomplete="off" placeholder="Type your answer…">
+        <button class="send" type="submit" aria-label="Send">
+          <svg viewBox="0 0 24 24"><path d="M2 21l21-9L2 3v7l15 2-15 2z"/></svg>
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { esc, plain } from "/assets/adhikaar.js";
+
+const $ = id => document.getElementById(id);
+let LANG = localStorage.getItem("av_lang") || "en";
+let SESSION = null;
+let LANGS = {};
+
+/* ------------------------------------------------ translations */
+async function loadStrings(lang){
+  const d = await (await fetch(`/api/i18n/${lang}`)).json();
+  window.AV_STRINGS = d.strings;
+  LANGS = d.languages;
+  LANG = d.language;
+  localStorage.setItem("av_lang", LANG);
+  paintChrome();
+}
+
+function paintChrome(){
+  const S = window.AV_STRINGS || {};
+  $("sp-tag").textContent = S.app_tagline || "";
+  $("begin").textContent = S.start_now || "Start";
+  $("entry").placeholder = S.type_here || "";
+  $("tb-sub").textContent = S.app_tagline || "";
+  // The switcher shows the language you'd move TO, not the one you're in.
+  const other = LANG === "en" ? "hi" : "en";
+  $("lang-btn").textContent = (LANGS[other] || {}).native || "हिन्दी";
+  $("lang-btn").dataset.next = other;
+}
+
+function paintLangs(){
+  $("langs").innerHTML = Object.entries(LANGS).map(([code, meta]) =>
+    `<button class="lang" data-code="${esc(code)}"
+       aria-pressed="${code === LANG}">${esc(meta.native)}</button>`).join("");
+  $("langs").querySelectorAll(".lang").forEach(b =>
+    b.addEventListener("click", async () => {
+      await loadStrings(b.dataset.code);
+      paintLangs();
+    }));
+}
+
+/* ------------------------------------------------ rendering */
+function bubble(text, mine = false){
+  const row = document.createElement("div");
+  row.className = "msg" + (mine ? " me" : "");
+  const b = document.createElement("div");
+  b.className = "bubble";
+  b.textContent = plain(text);
+  row.append(b);
+  $("feed").append(row);
+  scrollDown();
+  return row;
+}
+
+function typing(){
+  const row = document.createElement("div");
+  row.className = "msg";
+  row.innerHTML = `<div class="bubble"><div class="typing"><i></i><i></i><i></i></div></div>`;
+  $("feed").append(row);
+  scrollDown();
+  return row;
+}
+
+function card(data){
+  const el = document.createElement("av-card");
+  el.data = data;
+  $("feed").append(el);
+  scrollDown();
+}
+
+function scrollDown(){
+  requestAnimationFrame(() => { $("stream").scrollTop = $("stream").scrollHeight; });
+}
+
+function setChips(chips, inputMode){
+  const box = $("chips");
+  box.innerHTML = "";
+  (chips || []).forEach(c => {
+    const b = document.createElement("button");
+    b.className = "chip";
+    b.type = "button";
+    b.textContent = c.label;
+    b.addEventListener("click", () => send(c.value, c.label));
+    box.append(b);
+  });
+  $("entry").inputMode = inputMode === "amount" ? "numeric" : "text";
+}
+
+/* ------------------------------------------------ conversation */
+async function send(value, shownAs){
+  if (shownAs) bubble(shownAs, true);
+  setChips([]);
+  const dots = typing();
+  try {
+    const res = await fetch("/api/chat", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ session_id: SESSION, message: value, language: LANG }),
+    });
+    const d = await res.json();
+    dots.remove();
+    SESSION = d.session_id;
+    if (d.language && d.language !== LANG) { await loadStrings(d.language); }
+    for (const m of d.messages) bubble(m.text);
+    for (const c of d.cards) card(c);
+    setChips(d.chips, d.input);
+  } catch (err) {
+    dots.remove();
+    bubble("Couldn't reach the server. Check it's running, then tap ↻ to start again.");
+  }
+}
+
+async function begin(restart = false){
+  $("feed").innerHTML = "";
+  const dots = typing();
+  const res = await fetch("/api/chat", {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_id: restart ? SESSION : null, message: "",
+                           language: LANG, restart }),
+  });
+  const d = await res.json();
+  dots.remove();
+  SESSION = d.session_id;
+  for (const m of d.messages) bubble(m.text);
+  setChips(d.chips, d.input);
+}
+
+/* ------------------------------------------------ wiring */
+$("composer").addEventListener("submit", e => {
+  e.preventDefault();
+  const v = $("entry").value.trim();
+  if (!v) return;
+  $("entry").value = "";
+  send(v, v);
+});
+
+$("restart").addEventListener("click", () => begin(true));
+
+$("lang-btn").addEventListener("click", async e => {
+  await loadStrings(e.target.dataset.next);
+  await begin(true);
+});
+
+$("begin").addEventListener("click", async () => {
+  $("splash").classList.add("gone");
+  $("app").hidden = false;
+  setTimeout(() => { $("splash").hidden = true; }, 400);
+  await begin();
+});
+
+await loadStrings(LANG);
+paintLangs();
+</script>
+</body>
+</html>

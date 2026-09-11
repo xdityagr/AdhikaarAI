@@ -1,0 +1,195 @@
+{
+  "corpus_version": "v1",
+  "corporation": "NSFDC",
+  "generated_at": "2026-09-04",
+  "notes": [
+    "Plane A only — typed, deterministic values consumed by the eligibility engine,",
+    "the calculator and the router. Narrative content (Plane B) is not in this file.",
+    "See docs/data-sources.md §2.2 for why the two planes are kept apart.",
+    "",
+    "The PS names three schemes. NSFDC publishes five. The PS's own quoted range,",
+    "'6.5% to 15% depending on the scheme', and its '3 to 12 months' moratorium range",
+    "are both arithmetically impossible with three products and exact with five.",
+    "See docs/data-sources.md §4.1.",
+    "",
+    "Rates are published as a PAIR: intermediary_rate is what NSFDC charges the",
+    "channel partner, beneficiary_rate is what the partner charges the borrower.",
+    "The spread is the partner's margin. Only the beneficiary rate is ever quoted",
+    "to a user or used by the calculator.",
+    "",
+    "beneficiary_rate_by_partner_type uses a 'DEFAULT' key where NSFDC publishes a",
+    "single rate. Udyam Nidhi is the one scheme with a published spread by partner",
+    "category, which is what makes the Cheapest Route feature possible.",
+    "",
+    "NO AGE FIELD, deliberately. nsfdc.nic.in/eligibility-requirements states no age",
+    "condition, so its absence is now CONFIRMED rather than merely unverified.",
+    "Do not add age gating without a real published source."
+  ],
+  "provenance": {
+    "source_url": "https://nsfdc.nic.in/scheme",
+    "supporting_urls": [
+      "https://nsfdc.nic.in/eligibility-requirements",
+      "https://nsfdc.nic.in/faqs",
+      "https://nsfdc.nic.in/indicative-activities"
+    ],
+    "fetched_at": "2026-09-03",
+    "confidence": "OFFICIAL",
+    "review_note": "Retrieved by automated fetch. A human must confirm these figures by eye on the live pages before the finale — docs/data-sources.md §9 action 1."
+  },
+  "shared_eligibility": {
+    "category": ["SC"],
+    "max_family_income": 500000,
+    "income_basis": "ANNUAL_FAMILY_ALL_SOURCES",
+    "income_effective_date": "2026-01-07",
+    "income_applies_to": ["RURAL", "URBAN"],
+    "income_note": "Rs 5.00 lakh, rural and urban alike, effective 2026-01-07. The Rs 3L rural / Rs 3.5L urban figures widely repeated online are the PREVIOUS limits and are stale. See docs/data-sources.md §4.2.",
+    "applicant_types": ["INDIVIDUAL", "PARTNERSHIP_FIRM", "COOPERATIVE_SOCIETY"],
+    "all_members_must_qualify": true,
+    "age": null,
+    "requires_caste_certificate": true,
+    "direct_application_permitted": false
+  },
+  "schemes": [
+    {
+      "scheme_code": "MICRO_FINANCE",
+      "name": "Micro Finance Scheme",
+      "short_name": "MFS",
+      "status": "ACTIVE",
+      "project_types": ["business"],
+      "finance": {
+        "min_project_cost": null,
+        "max_project_cost": 140000,
+        "max_loan": 125000,
+        "financing_pct": 0.90,
+        "intermediary_rate": 2.5,
+        "beneficiary_rate_by_partner_type": { "DEFAULT": 6.5 },
+        "tenure_months": 36,
+        "repayment_frequency": "QUARTERLY",
+        "moratorium_months": 3,
+        "moratorium_variants": [],
+        "women_rebate_pct": null,
+        "security_requirements": null
+      },
+      "routing": {
+        "eligible_partner_types": ["SCA", "PSB", "RRB", "COOPERATIVE_BANK", "COOPERATIVE_SOCIETY"],
+        "channel_capability": "PRESENCE_MANDATORY",
+        "priority_allocation": { "women": 0.40 }
+      }
+    },
+    {
+      "scheme_code": "TERM_LOAN",
+      "name": "Term Loan",
+      "short_name": "TL",
+      "status": "ACTIVE",
+      "project_types": ["business"],
+      "finance": {
+        "min_project_cost": 140000,
+        "max_project_cost": 5000000,
+        "max_loan": 4500000,
+        "financing_pct": 0.90,
+        "intermediary_rate": 4.0,
+        "beneficiary_rate_by_partner_type": { "DEFAULT": 8.0 },
+        "tenure_months": 84,
+        "repayment_frequency": "QUARTERLY",
+        "moratorium_months": 6,
+        "moratorium_variants": [
+          {
+            "condition": "plantation_or_construction",
+            "moratorium_months": 12,
+            "note": "This 12-month variant is the upper end of the PS's own '3 to 12 months' range."
+          }
+        ],
+        "women_rebate_pct": null,
+        "security_requirements": null
+      },
+      "routing": {
+        "eligible_partner_types": ["SCA", "PSB", "RRB", "COOPERATIVE_BANK", "SIDBI_OTHER"],
+        "channel_capability": "PRESENCE_MANDATORY",
+        "priority_allocation": { "women": 0.40 }
+      }
+    },
+    {
+      "scheme_code": "AAJEEVIKA_MICRO_FINANCE",
+      "name": "Aajeevika Micro-Finance Yojana",
+      "short_name": "AMFY",
+      "status": "ACTIVE",
+      "project_types": ["business"],
+      "finance": {
+        "min_project_cost": null,
+        "max_project_cost": 140000,
+        "max_loan": 125000,
+        "financing_pct": 0.90,
+        "intermediary_rate": 5.0,
+        "beneficiary_rate_by_partner_type": { "DEFAULT": 15.0 },
+        "tenure_months": 36,
+        "repayment_frequency": "QUARTERLY",
+        "moratorium_months": 3,
+        "moratorium_variants": [],
+        "women_rebate_pct": null,
+        "security_requirements": null
+      },
+      "routing": {
+        "eligible_partner_types": ["NBFC_MFI"],
+        "channel_capability": "PRESENCE_MANDATORY",
+        "priority_allocation": null
+      }
+    },
+    {
+      "scheme_code": "UDYAM_NIDHI",
+      "name": "Udyam Nidhi Yojana",
+      "short_name": "UNY",
+      "status": "ACTIVE",
+      "project_types": ["business"],
+      "finance": {
+        "min_project_cost": null,
+        "max_project_cost": 500000,
+        "max_loan": 450000,
+        "financing_pct": 0.90,
+        "intermediary_rate": 5.0,
+        "beneficiary_rate_by_partner_type": {
+          "COOPERATIVE_BANK": 13.0,
+          "COOPERATIVE_SOCIETY": 13.0,
+          "SMALL_FINANCE_BANK": 15.0
+        },
+        "tenure_months": 60,
+        "repayment_frequency": "QUARTERLY",
+        "moratorium_months": 3,
+        "moratorium_variants": [],
+        "women_rebate_pct": null,
+        "security_requirements": null
+      },
+      "routing": {
+        "eligible_partner_types": ["COOPERATIVE_BANK", "COOPERATIVE_SOCIETY", "SMALL_FINANCE_BANK"],
+        "channel_capability": "PRESENCE_MANDATORY",
+        "priority_allocation": null
+      }
+    },
+    {
+      "scheme_code": "EDUCATIONAL_LOAN",
+      "name": "Educational Loan Scheme",
+      "short_name": "ELS",
+      "status": "ACTIVE",
+      "project_types": ["education"],
+      "finance": {
+        "min_project_cost": null,
+        "max_project_cost": 4000000,
+        "max_loan": 4000000,
+        "financing_pct": 0.90,
+        "intermediary_rate": 2.5,
+        "beneficiary_rate_by_partner_type": { "DEFAULT": 6.5 },
+        "tenure_months": 144,
+        "repayment_frequency": "QUARTERLY",
+        "moratorium_months": 12,
+        "moratorium_variants": [],
+        "moratorium_note": "Published as 'course period plus 1 year', or 6 months where repayment has already begun. Modelled here as 12 months because course duration is not known at recommendation time.",
+        "women_rebate_pct": 0.5,
+        "security_requirements": null
+      },
+      "routing": {
+        "eligible_partner_types": ["SCA", "PSB", "RRB"],
+        "channel_capability": "PRESENCE_MANDATORY",
+        "priority_allocation": null
+      }
+    }
+  ]
+}

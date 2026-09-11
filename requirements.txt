@@ -1,0 +1,29 @@
+# What the running API needs. Nothing here is for the ingest.
+#
+# `python-multipart` and `cryptography` were used by the code but missing from
+# pyproject — /api/transcribe and every Aadhaar signature check would have
+# failed on a fresh install with an import error that names neither.
+fastapi>=0.115
+uvicorn[standard]>=0.34
+python-multipart>=0.0.20
+pydantic>=2.10
+pydantic-settings>=2.7
+python-dotenv>=1.1
+httpx>=0.28
+aiosqlite>=0.21
+cryptography>=44.0
+Pillow>=10.0
+langchain-google-genai>=4.0.0
+
+# The scripted fallback still parses the legacy graph in tests; the API itself
+# no longer imports it. Kept because chat.py's fallback path is the thing that
+# answers when the model quota is spent, and a demo must not depend on a key.
+langgraph>=0.4
+langgraph-checkpoint-sqlite>=2.0
+
+# Imported lazily, inside functions, which is why a missing one does not fail
+# at boot — it fails on the first question the assistant is asked, or the first
+# Aadhaar file uploaded. Declared explicitly rather than relied on as somebody
+# else's transitive dependency.
+langchain-core>=1.0
+lxml>=5.0
