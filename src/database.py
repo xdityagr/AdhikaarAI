@@ -92,6 +92,53 @@ DDL_STATEMENTS = [
         processed_at TEXT NOT NULL
     )
     """,
+    # ---- the operator panel ------------------------------------------------
+    #
+    # The only accounts in this system. Citizens have none and are never asked
+    # for one; these are the CSC operators, NGO workers and SCA staff who file
+    # on somebody's behalf, and they exist so that a view of other people's
+    # welfare applications is not a public one.
+    """
+    CREATE TABLE IF NOT EXISTS organisations (
+        organisation_id TEXT PRIMARY KEY,
+        name TEXT NOT NULL,
+        -- CSC | NGO | SCA | BANK. Not the prudential discriminator on
+        -- channel_partners; this is simply who they are.
+        kind TEXT NOT NULL,
+        state TEXT,
+        district TEXT,
+        created_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS operators (
+        operator_id TEXT PRIMARY KEY,
+        organisation_id TEXT NOT NULL,
+        -- Lower-cased at write time so a login cannot be defeated by capitals,
+        -- and UNIQUE so two accounts cannot share one address.
+        email TEXT NOT NULL UNIQUE,
+        name TEXT NOT NULL,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL,
+        -- Set to 0 to revoke access without deleting the audit trail of what
+        -- this person did. Deleting an operator would orphan their caseload.
+        active INTEGER NOT NULL DEFAULT 1,
+        failed_attempts INTEGER NOT NULL DEFAULT 0,
+        last_failure_at TEXT,
+        last_login_at TEXT,
+        created_at TEXT NOT NULL
+    )
+    """,
+    """
+    CREATE TABLE IF NOT EXISTS operator_sessions (
+        -- The SHA-256 of the cookie's token, never the token. A leaked table
+        -- must not be a set of live logins.
+        token_hash TEXT PRIMARY KEY,
+        operator_id TEXT NOT NULL,
+        created_at TEXT NOT NULL,
+        expires_at TEXT NOT NULL
+    )
+    """,
     """
     CREATE TABLE IF NOT EXISTS recommendation_cache (
         profile_fingerprint TEXT NOT NULL,
@@ -498,3 +545,133 @@ async def get_or_create_user(db: aiosqlite.Connection, user_id: str) -> dict:
             "created_at": now,
             "last_active_at": now,
         }
+
+
+# ---------------------------------------------------------------------------
+# The operator panel
+#
+# Positional reads throughout, like everything above, so this works unchanged
+# on Postgres. `ON CONFLICT` rather than `INSERT OR REPLACE` for the same
+# reason.
+# ---------------------------------------------------------------------------
+
+async def create_organisation(db, organisation_id: str, name: str, kind: str,
+                              state: Optional[str] = None,
+                              district: Optional[str] = None) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO organisations
+               (organisation_id, name, kind, state, district, created_at)
+           VALUES (?,?,?,?,?,?)
+           ON CONFLICT(organisation_id) DO UPDATE SET
+             name=excluded.name, kind=excluded.kind,
+             state=excluded.state, district=excluded.district""",
+        (organisation_id, name, kind, state, district, now),
+    )
+    await db.commit()
+
+
+async def create_operator(db, operator_id: str, organisation_id: str,
+                          email: str, name: str, password_hash: str,
+                          role: str) -> None:
+    """One account. The email is lower-cased here rather than at every call
+    site, so a login cannot be defeated by capitals."""
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO operators
+               (operator_id, organisation_id, email, name, password_hash,
+                role, active, failed_attempts, created_at)
+           VALUES (?,?,?,?,?,?,1,0,?)""",
+        (operator_id, organisation_id, email.strip().lower(), name,
+         password_hash, role, now),
+    )
+    await db.commit()
+
+
+async def find_operator_by_email(db, email: str) -> Optional[tuple]:
+    """`(operator_id, organisation_id, email, name, password_hash, role,
+    active, failed_attempts, last_failure_at)`, or None."""
+    cursor = await db.execute(
+        """SELECT operator_id, organisation_id, email, name, password_hash,
+                  role, active, failed_attempts, last_failure_at
+           FROM operators WHERE email = ?""",
+        (email.strip().lower(),),
+    )
+    return await cursor.fetchone()
+
+
+async def record_login_failure(db, operator_id: str) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """UPDATE operators
+           SET failed_attempts = failed_attempts + 1, last_failure_at = ?
+           WHERE operator_id = ?""",
+        (now, operator_id),
+    )
+    await db.commit()
+
+
+async def record_login_success(db, operator_id: str) -> None:
+    """Clears the counter, so somebody who mistypes twice and then gets it
+    right is not one mistake away from a lockout tomorrow."""
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """UPDATE operators
+           SET failed_attempts = 0, last_failure_at = NULL, last_login_at = ?
+           WHERE operator_id = ?""",
+        (now, operator_id),
+    )
+    await db.commit()
+
+
+async def open_session(db, token_hash: str, operator_id: str,
+                       expires_at: str) -> None:
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO operator_sessions
+               (token_hash, operator_id, created_at, expires_at)
+           VALUES (?,?,?,?)
+           ON CONFLICT(token_hash) DO UPDATE SET expires_at=excluded.expires_at""",
+        (token_hash, operator_id, now, expires_at),
+    )
+    await db.commit()
+
+
+async def session_operator(db, token_hash: str) -> Optional[tuple]:
+    """The operator behind a live session token, joined in one query.
+
+    Returns `(operator_id, organisation_id, name, role, email, expires_at,
+    active)`. Expiry is checked by the caller rather than in SQL, because
+    comparing ISO strings in SQL works by luck and not by design.
+    """
+    cursor = await db.execute(
+        """SELECT o.operator_id, o.organisation_id, o.name, o.role, o.email,
+                  s.expires_at, o.active
+           FROM operator_sessions s
+           JOIN operators o ON o.operator_id = s.operator_id
+           WHERE s.token_hash = ?""",
+        (token_hash,),
+    )
+    return await cursor.fetchone()
+
+
+async def close_session(db, token_hash: str) -> None:
+    await db.execute("DELETE FROM operator_sessions WHERE token_hash = ?",
+                     (token_hash,))
+    await db.commit()
+
+
+async def close_all_sessions(db, operator_id: str) -> None:
+    """Every session this operator has, everywhere. What "revoke access" has
+    to mean, and what a password change has to do."""
+    await db.execute("DELETE FROM operator_sessions WHERE operator_id = ?",
+                     (operator_id,))
+    await db.commit()
+
+
+async def sweep_sessions(db, now_iso: str) -> int:
+    """Delete sessions that have expired. Returns how many went."""
+    cursor = await db.execute(
+        "DELETE FROM operator_sessions WHERE expires_at <= ?", (now_iso,))
+    await db.commit()
+    return cursor.rowcount or 0
