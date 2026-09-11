@@ -39,6 +39,7 @@ response — the same promise the wizard makes.
 
 from __future__ import annotations
 
+import html
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -75,6 +76,15 @@ class Document:
 
 
 @dataclass
+class Note:
+    """A sentence we wrote, not the government. `code` is what the interface
+    translates on; `text` is English and is what anything without a translation
+    layer prints."""
+    code: str
+    text: str
+
+
+@dataclass
 class Pack:
     slug: str
     name: str
@@ -83,7 +93,7 @@ class Pack:
     fields: list[Field] = field(default_factory=list)
     documents: list[Document] = field(default_factory=list)
     steps: list[str] = field(default_factory=list)
-    notes: list[str] = field(default_factory=list)
+    notes: list[Note] = field(default_factory=list)
     """False when the scheme itself has no published process — we say so
     rather than inventing one."""
     has_process: bool = True
@@ -165,6 +175,16 @@ def parse_list(markdown: Optional[str], limit: int = 24) -> list[str]:
         text = re.sub(r"\*\*(.+?)\*\*", r"\1", text)          # bold
         text = re.sub(r"\[([^\]]+)\]\(([^)]+)\)", r"\1 (\2)", text)   # links
         text = re.sub(r"^#{1,6}\s*", "", text).strip()
+        # myScheme's prose is converted from rich text and carries HTML through
+        # with it. Two things reached the screen because of that: a bare <br>
+        # rendered as its own numbered step, and "click on &#39;New&#39; button"
+        # shown verbatim to someone being told how to apply. Tags go first so a
+        # stripped <br> leaves an empty line that the length check drops;
+        # entities are unescaped after, so a literal &amp;#39; in the source
+        # cannot be decoded twice into a quote that was never there.
+        text = re.sub(r"<[^>]{1,40}>", " ", text)
+        text = html.unescape(text)
+        text = re.sub(r"\s{2,}", " ", text).strip()
         if len(text) > 2:
             items.append(text)
         if len(items) >= limit:
@@ -285,21 +305,31 @@ def build(
     )
 
     # Said plainly, every time, on the sheet itself — not buried in a footer.
-    pack.notes.append(
+    #
+    # Each note carries a stable code as well as its English sentence. The web
+    # interface translates on the code and so speaks all thirteen languages;
+    # WhatsApp and the printed sheet have no translation layer and fall back to
+    # the sentence. Sending only prose meant a Hindi page ended in an English
+    # paragraph about not paying anybody a fee — the one line on the sheet that
+    # most needs to be understood.
+    pack.notes.append(Note(
+        "no_fee",
         "No fee is required to apply for a government scheme. Nobody should "
-        "ask you for money to fill this in."
-    )
+        "ask you for money to fill this in.",
+    ))
     if not documents:
-        pack.notes.append(
+        pack.notes.append(Note(
+            "no_documents",
             "This scheme has not published its document list. Carry proof of "
             "identity, address, category and income, and ask at the office "
-            "what else is needed."
-        )
+            "what else is needed.",
+        ))
     if not steps:
-        pack.notes.append(
+        pack.notes.append(Note(
+            "no_steps",
             "This scheme has not published its steps. The official page is "
-            "linked above and is the same source we use."
-        )
+            "linked above and is the same source we use.",
+        ))
     return pack
 
 
@@ -317,7 +347,7 @@ def to_dict(pack: Pack) -> dict:
         ],
         "documents": [{"text": d.text, "held": d.held} for d in pack.documents],
         "steps": pack.steps,
-        "notes": pack.notes,
+        "notes": [{"code": n.code, "text": n.text} for n in pack.notes],
         "filled": sum(1 for f in pack.fields if not f.blank),
         "total": len(pack.fields),
     }

@@ -83,7 +83,13 @@ class TestPack:
 
     def test_the_no_fee_warning_is_always_present(self):
         pack = application.build("sui", {})
-        assert any("fee" in note.lower() for note in pack.notes)
+        # Asserted on the CODE as well as the sentence. The code is what the
+        # interface translates on — the sentence is only what anything without a
+        # translation layer prints — so a note that lost its code would go back
+        # to ending a Hindi page in an English paragraph about not paying a fee,
+        # which is the one line on the sheet that most needs to be understood.
+        assert any(note.code == "no_fee" for note in pack.notes)
+        assert any("fee" in note.text.lower() for note in pack.notes)
 
     def test_a_scheme_with_no_published_steps_says_so(self):
         pack = application.build("sui", {})
