@@ -1,0 +1,641 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ---------------------------------------------------------------------------
+   Scripts.
+
+   Thirteen languages, nine scripts. Each face is declared with the unicode
+   range it actually serves, so a browser downloads Bengali only when there is
+   Bengali on the page — the alternative is a megabyte of fonts posted to every
+   visitor, most of it for alphabets they will never read.
+
+   ZWNJ and ZWJ (200C/200D) ride along in every range on purpose. They are
+   invisible, but Indic shaping uses them to break and force conjuncts; leaving
+   them out of the range splits the text run and breaks the shaping.
+--------------------------------------------------------------------------- */
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-devanagari.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+A8E0-A8FF, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-bengali.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0980-09FF, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-gurmukhi.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0A00-0A7F, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-gujarati.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0A80-0AFF, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-odia.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0B00-0B7F, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-tamil.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0B80-0BFF, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-telugu.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0C00-0C7F, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-kannada.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0C80-0CFF, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-malayalam.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0D00-0D7F, U+200C-200D, U+25CC;
+}
+@font-face {
+  font-family: "Noto Indic";
+  src: url("/fonts/noto-urdu.woff2") format("woff2");
+  font-weight: 400 700; font-style: normal; font-display: swap;
+  unicode-range: U+0600-06FF, U+0750-077F, U+FB50-FDFF, U+FE70-FEFF, U+200C-200D;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  /* One stack, every script. Latin is served by Hanken or Inter; anything
+     outside their range falls through to the Noto face that covers it. */
+  --font-sans: var(--font-inter), "Noto Indic", system-ui, "Segoe UI", sans-serif;
+  --font-display: var(--font-hanken), "Noto Indic", system-ui, sans-serif;
+  --font-heading: var(--font-display);
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  --color-paper: var(--paper);
+  --color-ink: var(--foreground);
+  --color-faint: var(--faint);
+  --color-leaf: var(--leaf);
+  --color-mint: var(--mint);
+  --color-gold: var(--gold);
+  --color-gold-soft: var(--gold-soft);
+  --color-gold-ink: var(--gold-ink);
+  --color-clay: var(--clay);
+  --color-clay-soft: var(--clay-soft);
+  --color-verified: var(--verified);
+  --color-verified-soft: var(--verified-soft);
+  --color-forest-deep: var(--forest-deep);
+
+  --radius-sm: calc(var(--radius) * 0.5);
+  --radius-md: calc(var(--radius) * 0.72);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.35);
+  --radius-2xl: calc(var(--radius) * 1.75);
+  --radius-3xl: calc(var(--radius) * 2.2);
+}
+
+/* ---------------------------------------------------------------------------
+   Adhikaar AI palette — "Sunrise".
+
+   Warm paper rather than white, because these pages are long and are read on
+   cheap screens in daylight. Deep forest green carries every action; marigold
+   is emphasis that has earned it; clay is reserved for what a moneylender
+   charges, so the one alarming colour on the site always means the same thing.
+
+   Nothing glows. Depth comes from a hairline and a wide, faint shadow.
+--------------------------------------------------------------------------- */
+:root {
+  --paper: #fdfcfa;
+  --background: #fdfcfa;
+  --foreground: #1c1a17;
+  --muted-foreground: #6e675d;
+  --faint: #9a9287;
+
+  --card: #ffffff;
+  --card-foreground: #1c1a17;
+  --popover: #ffffff;
+  --popover-foreground: #1c1a17;
+
+  --primary: #14402f;
+  --primary-foreground: #f4f9f6;
+  --forest-deep: #0c2e22;
+
+  /* The green that speaks rather than acts — eyebrows, figures, links. */
+  --leaf: #226b4c;
+  --mint: #eaf3ee;
+
+  --secondary: #f2efe8;
+  --secondary-foreground: #14402f;
+  --muted: #f5f2eb;
+  --accent: #eaf3ee;
+  --accent-foreground: #14402f;
+
+  --gold: #c8871c;
+  --gold-soft: #fdf4e4;
+  --gold-ink: #7a4a09;
+
+  --clay: #b4552a;
+  --clay-soft: #fdf0e9;
+
+  --verified: #1b7a52;
+  --verified-soft: #e8f4ee;
+  --destructive: #a3301f;
+
+  --border: #eae4da;
+  --input: #e2dacd;
+  --ring: #226b4c;
+
+  --chart-1: #14402f;
+  --chart-2: #c8871c;
+  --chart-3: #226b4c;
+  --chart-4: #6e675d;
+  --chart-5: #b4552a;
+
+  --radius: 0.875rem;
+
+  --sidebar: #ffffff;
+  --sidebar-foreground: #1c1a17;
+  --sidebar-primary: #14402f;
+  --sidebar-primary-foreground: #f4f9f6;
+  --sidebar-accent: #eaf3ee;
+  --sidebar-accent-foreground: #14402f;
+  --sidebar-border: #eae4da;
+  --sidebar-ring: #226b4c;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+  html {
+    @apply font-sans;
+    /* The product is light-themed on purpose: it is read on cheap phone
+       screens in daylight, often by someone who is not a confident reader.
+       Locking the scheme stops the OS dark preference from inverting it. */
+    color-scheme: light;
+  }
+
+  /* Display type is light and tightly tracked. That is a Latin setting: it is
+     what gives the headings their air. Both halves of it are wrong for Indic
+     and Arabic scripts, and the overrides for those live below. */
+  h1, h2, h3 {
+    font-family: var(--font-display);
+    font-weight: 300;
+    letter-spacing: -0.028em;
+    line-height: 1.06;
+  }
+
+  ::selection {
+    background: var(--mint);
+    color: var(--primary);
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   Setting the other twelve languages.
+
+   Deliberately NOT inside `@layer base`. Tailwind's utilities live in a later
+   cascade layer, and a later layer beats an earlier one no matter how specific
+   the earlier selector is — so `:lang(ta) h1 { font-size }` written in `base`
+   loses to `text-[4.125rem]` every time, and Tamil headlines ran five lines
+   down the page. Unlayered rules outrank every layer, which is exactly the
+   authority these need.
+
+   Two things that make Latin headings elegant actively damage Indic text.
+   Negative tracking closes the gaps a Devanagari shirorekha needs and jams
+   Tamil and Telugu loops into each other. And a 300 weight that reads as
+   refined in Hanken reads as spidery and broken in Noto — these faces are
+   drawn for 400 upward. So Indic headings get normal tracking, normal weight,
+   and a size ceiling of their own: twenty characters of Tamil occupy far more
+   width and height than twenty characters of Latin at the same point size.
+
+   Line height matters more here than in Latin too: these scripts carry marks
+   above and below the baseline, and 1.5 collapses them into each other.
+--------------------------------------------------------------------------- */
+:lang(hi), :lang(mr), :lang(bn), :lang(as), :lang(ta), :lang(te),
+:lang(gu), :lang(kn), :lang(ml), :lang(pa), :lang(or) {
+  line-height: 1.75;
+}
+
+:is(:lang(hi), :lang(mr), :lang(bn), :lang(as), :lang(ta), :lang(te),
+    :lang(gu), :lang(kn), :lang(ml), :lang(pa), :lang(or), :lang(ur))
+  :is(h1, h2, h3) {
+  font-weight: 500;
+  letter-spacing: normal;
+  line-height: 1.28;
+}
+
+/* Only h1 — the page title — is capped. Section headings are h2 and are
+   already small enough to survive the difference between the scripts. */
+:is(:lang(hi), :lang(mr), :lang(bn), :lang(as), :lang(ta), :lang(te),
+    :lang(gu), :lang(kn), :lang(ml), :lang(pa), :lang(or), :lang(ur)) h1 {
+  font-size: clamp(1.75rem, 4.2vw, 2.75rem);
+}
+
+/* Malayalam and Tamil sit optically smaller than Latin at the same size;
+   Nastaliq sits larger and needs far more leading than any of them. */
+:lang(ml), :lang(ta) { font-size: 1.02em; }
+:lang(ur) { line-height: 2.05; letter-spacing: normal; }
+:lang(ur) :is(h1, h2, h3) { line-height: 1.9; }
+
+/* Small-caps meta labels are a Latin device. Uppercasing and letterspacing an
+   Indic string produces nonsense, so those styles are neutralised. */
+:is(:lang(hi), :lang(mr), :lang(bn), :lang(as), :lang(ta), :lang(te),
+    :lang(gu), :lang(kn), :lang(ml), :lang(pa), :lang(or), :lang(ur)) .meta {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.8125rem;
+}
+
+/* The header bar is wider than the pages it sits above, because six section
+   labels in Bengali or Telugu are close to twice the width of the English
+   ones and were being clipped against a 1152px container. Long labels also
+   drop a step in size here — enough to fit without reading as smaller. */
+[data-site-nav] {
+  font-size: 0.875rem;
+}
+:is(:lang(ta), :lang(ml), :lang(kn), :lang(te), :lang(or), :lang(as),
+    :lang(bn), :lang(pa), :lang(gu), :lang(mr)) [data-site-nav] {
+  font-size: 0.8125rem;
+  gap: 0;
+}
+:is(:lang(ta), :lang(ml), :lang(kn), :lang(te), :lang(or), :lang(as),
+    :lang(bn), :lang(pa), :lang(gu), :lang(mr)) [data-site-nav] a {
+  padding-inline: 0.5rem;
+}
+
+/* Tamil and Malayalam are the two widest and were still 18-26px over at
+   1280px. Measured, not guessed. */
+:is(:lang(ta), :lang(ml)) [data-site-nav] a {
+  padding-inline: 0.3125rem;
+}
+
+/* ---------------------------------------------------------------------------
+   Utilities
+--------------------------------------------------------------------------- */
+
+@utility dawn {
+  /* The atmosphere behind the top of a page: marigold overhead, sage to the
+     left, clay to the right, dissolving into paper. It is a sunrise over a
+     field, and it is the only decoration on the site. */
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -18%, rgba(238, 150, 32, 0.5), transparent 58%),
+    radial-gradient(ellipse 70% 42% at 78% -8%, rgba(222, 112, 64, 0.28), transparent 58%),
+    radial-gradient(ellipse 78% 46% at 16% -4%, rgba(86, 164, 132, 0.3), transparent 60%),
+    radial-gradient(ellipse 130% 40% at 50% 12%, rgba(253, 252, 250, 0.55), transparent 70%);
+}
+
+@utility sky-top {
+  /* The sky, painted once on the document rather than inside a section, so it
+     runs behind a transparent header right to the top edge of the screen — the
+     way it does on a phone under the status bar. Every page gets it; pages
+     that are not the front door simply have less of it above the fold. */
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% -18%, rgba(238, 150, 32, 0.5), transparent 58%),
+    radial-gradient(ellipse 70% 42% at 78% -8%, rgba(222, 112, 64, 0.28), transparent 58%),
+    radial-gradient(ellipse 78% 46% at 16% -4%, rgba(86, 164, 132, 0.3), transparent 60%),
+    radial-gradient(ellipse 130% 40% at 50% 12%, rgba(253, 252, 250, 0.55), transparent 70%);
+  background-repeat: no-repeat;
+  background-position: top center;
+  background-size: 100% 760px;
+}
+
+@utility dawn-soft {
+  /* The same sky, much further away — for pages that are not the front door. */
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 90% 46% at 50% -22%, rgba(238, 150, 32, 0.24), transparent 58%),
+    radial-gradient(ellipse 70% 36% at 82% -12%, rgba(222, 112, 64, 0.13), transparent 58%),
+    radial-gradient(ellipse 76% 40% at 14% -8%, rgba(86, 164, 132, 0.15), transparent 60%);
+}
+
+@utility rule-y {
+  border-block: 1px solid var(--border);
+}
+
+@utility card-quiet {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow:
+    0 1px 2px rgb(28 26 23 / 0.04),
+    0 18px 48px -28px rgb(28 26 23 / 0.16);
+}
+
+@utility meta {
+  /* The small uppercase label used above figures and beside record headings.
+     Neutralised for non-Latin scripts above. */
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--faint);
+}
+
+@utility tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Motion, used sparingly and never for anything a person is waiting on. */
+@keyframes rise {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@utility rise {
+  animation: rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+   The splash.
+
+   Plain CSS, because this paints in the first frame — ahead of hydration, and
+   ahead of any class Tailwind could give it. It plays itself out and then gets
+   out of the way; see components/splash.tsx for why there is no script here.
+--------------------------------------------------------------------------- */
+.adh-splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Never intercepts a tap, at any point in its life. A splash that fails
+     open is a decoration; a splash that fails closed is a broken website. */
+  pointer-events: none;
+  background-color: var(--paper);
+  background-image:
+    radial-gradient(ellipse 90% 55% at 50% 10%, rgba(238, 150, 32, 0.42), transparent 58%),
+    radial-gradient(ellipse 70% 42% at 80% 20%, rgba(222, 112, 64, 0.24), transparent 58%),
+    radial-gradient(ellipse 78% 46% at 18% 24%, rgba(86, 164, 132, 0.26), transparent 60%);
+  animation: adh-splash-out 1.15s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+.adh-splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
+  animation: adh-splash-in 0.62s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.adh-splash-word {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: 2.125rem;
+  letter-spacing: -0.03em;
+  color: var(--foreground);
+}
+.adh-splash-gloss {
+  font-family: var(--font-sans);
+  font-size: 0.8125rem;
+  color: var(--faint);
+}
+@keyframes adh-splash-in {
+  from { opacity: 0; transform: translateY(9px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes adh-splash-out {
+  0%, 58% { opacity: 1; visibility: visible; }
+  100% { opacity: 0; visibility: hidden; transform: scale(1.015); }
+}
+
+/* Someone who has asked for less motion has asked for less of this, too —
+   and the global reduced-motion rule would otherwise freeze the overlay at
+   full opacity over the page, which is the one outcome we cannot ship. */
+@media (prefers-reduced-motion: reduce) {
+  .adh-splash { display: none; }
+}
+
+/* ---------------------------------------------------------------------------
+   The assistant's mark.
+
+   The same sunrise the pages are washed in, compressed into a disc. It is the
+   one place the product is allowed to look like software thinking: it turns
+   slowly while a question is being worked on, and is still the rest of the
+   time. Restraint matters here — this is a page about money someone needs, and
+   a pulsing gradient blob that never stops moving reads as a toy.
+--------------------------------------------------------------------------- */
+.adh-orb {
+  position: relative;
+  border-radius: 9999px;
+  overflow: hidden;
+  background-color: #f5efe4;
+  background-image:
+    radial-gradient(circle at 28% 24%, rgba(238, 150, 32, 0.95), transparent 56%),
+    radial-gradient(circle at 74% 32%, rgba(222, 112, 64, 0.8), transparent 55%),
+    radial-gradient(circle at 52% 80%, rgba(86, 164, 132, 0.92), transparent 58%);
+}
+.adh-orb[data-busy="true"] {
+  animation: adh-orb-turn 6s linear infinite;
+}
+.adh-orb[data-busy="true"]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 9999px;
+  animation: adh-orb-breathe 2.4s ease-in-out infinite;
+}
+@keyframes adh-orb-turn {
+  to { transform: rotate(360deg); }
+}
+@keyframes adh-orb-breathe {
+  0%, 100% { box-shadow: inset 0 0 0 0 rgba(255, 255, 255, 0); }
+  50% { box-shadow: inset 0 0 12px 2px rgba(255, 255, 255, 0.45); }
+}
+
+/* The line that runs while an answer is being assembled. Sized by the caller. */
+.adh-shimmer {
+  background-image: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(238, 150, 32, 0.28) 35%,
+    rgba(86, 164, 132, 0.3) 55%,
+    transparent 100%
+  );
+  background-size: 220% 100%;
+  animation: adh-shimmer 1.8s linear infinite;
+}
+@keyframes adh-shimmer {
+  from { background-position: 220% 0; }
+  to { background-position: -220% 0; }
+}
+
+/* ---------------------------------------------------------------------------
+   Motion.
+
+   Two rules govern everything below. Only transform and opacity are animated,
+   because those are the two a browser can hand to the compositor — anything
+   touching layout drops frames on the ₹6,000 phone this is mostly read on.
+   And nothing a person is waiting for is ever delayed by an animation: the
+   entrance timings here are all short enough to finish before a reader has
+   found the start of the sentence.
+
+   The reduced-motion rule near the top of this file switches all of it off.
+--------------------------------------------------------------------------- */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --motion-fast: 160ms;
+  --motion: 260ms;
+  --motion-slow: 520ms;
+}
+
+@keyframes motion-rise {
+  from { opacity: 0; transform: translate3d(0, 12px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes motion-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes motion-in-end {
+  from { opacity: 0; transform: translate3d(8px, 4px, 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes motion-in-start {
+  from { opacity: 0; transform: translate3d(-8px, 4px, 0); }
+  to { opacity: 1; transform: none; }
+}
+
+/* Scroll reveal.
+   Armed by JavaScript on mount, never in the server markup — so a reader
+   whose script never runs gets a plain visible page instead of a blank one
+   waiting for an observer that will never fire. */
+.motion-reveal[data-armed="1"] {
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  will-change: opacity, transform;
+}
+.motion-reveal[data-armed="1"][data-shown="1"] {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--motion-slow) var(--ease-out),
+    transform var(--motion-slow) var(--ease-out);
+  will-change: auto;
+}
+
+/* A group whose children arrive one after another rather than all at once.
+   Six steps at 60ms is 360ms end to end — a cascade you feel and do not wait
+   for. Past the sixth child everything shares the last delay, because a long
+   list that keeps stepping turns into a queue. */
+.motion-stagger > * {
+  animation: motion-rise var(--motion-slow) var(--ease-out) both;
+}
+.motion-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.motion-stagger > *:nth-child(2) { animation-delay: 60ms; }
+.motion-stagger > *:nth-child(3) { animation-delay: 120ms; }
+.motion-stagger > *:nth-child(4) { animation-delay: 180ms; }
+.motion-stagger > *:nth-child(5) { animation-delay: 240ms; }
+.motion-stagger > *:nth-child(n + 6) { animation-delay: 300ms; }
+
+@utility motion-fade-in {
+  animation: motion-fade var(--motion) var(--ease-soft) both;
+}
+@utility motion-rise-in {
+  animation: motion-rise var(--motion-slow) var(--ease-out) both;
+}
+@utility motion-in-end {
+  animation: motion-in-end var(--motion) var(--ease-out) both;
+}
+@utility motion-in-start {
+  animation: motion-in-start var(--motion) var(--ease-out) both;
+}
+
+/* The arrow on a call to action leans toward where it is taking you. 2px —
+   enough to notice on hover, not enough to look like it came loose. */
+@utility nudge {
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+.group:hover .nudge,
+a:hover > .nudge,
+button:hover > .nudge {
+  transform: translateX(2px);
+}
+[dir="rtl"] .group:hover .nudge,
+[dir="rtl"] a:hover > .nudge,
+[dir="rtl"] button:hover > .nudge {
+  transform: translateX(-2px);
+}
+
+/* A surface that lifts very slightly when pointed at, and settles when
+   pressed. Pointer-only: on a touch screen :hover sticks after the tap.
+
+   `@utility` has to sit at the top level — Tailwind v4 registers these while
+   building the utility layer, before any at-rule is evaluated, so one nested
+   inside `@media` is a build error rather than a conditional utility. The
+   media query goes INSIDE it instead, which is what was meant anyway: the
+   transition is declared for pointer devices only. */
+@utility lift {
+  @media (hover: hover) and (pointer: fine) {
+    transition:
+      transform var(--motion) var(--ease-out),
+      box-shadow var(--motion) var(--ease-out),
+      border-color var(--motion) var(--ease-out);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .lift:hover { transform: translate3d(0, -2px, 0); }
+  .lift:active { transform: translate3d(0, 0, 0); }
+}
