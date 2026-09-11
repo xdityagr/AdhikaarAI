@@ -25,6 +25,7 @@ from pydantic import BaseModel, Field
 
 from src import aadhaar_qr
 from src import application
+from src import documents
 from src import handoff
 from src import speech
 from src.agent import (
@@ -708,6 +709,60 @@ async def transcribe_audio(
     }
 
 
+@router.post("/documents/identify")
+async def identify_document(
+    image: UploadFile = File(...),
+    slug: str = Form(""),
+) -> dict:
+    """Name the document in a photograph, and tick it off a scheme's list.
+
+    UNLIKE THE AADHAAR SCANNER, THIS SENDS THE PICTURE. That scanner decodes a
+    QR code in the browser and uploads only the decoded string, and says so. A
+    ration card has no QR to decode, so there is no version of this that keeps
+    the image on the phone. It is read into memory, classified, and dropped —
+    never written to disk, never logged, and the prompt explicitly forbids the
+    model from reading out any number printed on it. The interface says all of
+    this where someone can see it before they tap the shutter.
+
+    Passing `slug` reconciles the photograph against that scheme's published
+    document list, which is the useful half: not "this is a ration card" but
+    "that is the third thing this scheme asks for, and two are still missing".
+
+    Never raises on a bad photograph. An unreadable image comes back with
+    `unclear` set, because the checklist works perfectly well by hand and an
+    HTTP error would take a working page away from someone holding a phone in
+    bad light.
+    """
+    raw = await image.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Empty image")
+    if len(raw) > documents.MAX_IMAGE_BYTES:
+        raise HTTPException(status_code=413, detail="Image too large")
+
+    found = await documents.identify(raw, image.content_type or "image/jpeg")
+
+    matched_index: Optional[int] = None
+    required: list[str] = []
+    if slug:
+        scheme = get_scheme(slug)
+        if scheme:
+            required = application.parse_list(scheme.get("documents_md"))
+            if found.label:
+                matched_index = documents.match_to_requirement(found.label, required)
+
+    return {
+        "label": found.label,
+        "unclear": found.unclear,
+        "note": found.note,
+        "available": documents.is_available(),
+        # Which line of the scheme's list this satisfies, if any. None with a
+        # label set means it is a real document the scheme did not ask for —
+        # worth saying, rather than dropping on the floor.
+        "matched_index": matched_index,
+        "requirements": required,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Filling the form
 # ---------------------------------------------------------------------------
@@ -715,6 +770,10 @@ async def transcribe_audio(
 class ApplicationRequest(BaseModel):
     profile: dict = Field(default_factory=dict)
     lang: str = "en"
+    #: Which documents the person says they already have, keyed by the exact
+    #: requirement text. Sent by the browser, which is where it lives — a tick
+    #: list is not worth a row holding somebody's circumstances on our server.
+    held: dict = Field(default_factory=dict)
 
 
 @router.post("/application/{slug}")
@@ -728,7 +787,8 @@ async def prepare_application(slug: str, request: ApplicationRequest) -> dict:
     This does NOT submit anything anywhere. See `src.application` for why that
     is a decision rather than a limitation.
     """
-    pack = application.build(slug, request.profile, lang=request.lang)
+    pack = application.build(slug, request.profile, lang=request.lang,
+                             held=request.held)
     if pack is None:
         raise HTTPException(status_code=404, detail=f"No scheme with slug '{slug}'")
     return application.to_dict(pack)
