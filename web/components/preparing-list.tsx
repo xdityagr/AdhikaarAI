@@ -39,7 +39,7 @@ function subscribeDocuments(listener: () => void): () => void {
   };
 }
 
-export function PreparingList() {
+export function PreparingList({ className }: { className?: string }) {
   const { t } = useLanguage();
   const applications = useApplications();
   // Re-read on any storage or focus event; the value itself is read per card.
@@ -59,7 +59,7 @@ export function PreparingList() {
   if (!preparing.length) return null;
 
   return (
-    <section className="mb-10">
+    <section className={className}>
       <h2 className="font-display text-[1.25rem] font-normal">
         {t("track.preparing.title")}
       </h2>

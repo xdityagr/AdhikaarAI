@@ -34,7 +34,9 @@ export default async function TrackPage() {
           </p>
         </aside>
 
-        <PreparingList />
+        {/* The aside above is a bordered callout with no bottom margin of its
+            own, so anything following it collides with its last line. */}
+        <PreparingList className="mt-14" />
         <ApplicationTracker className="mt-14" />
       </div>
     </div>

@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Check, ExternalLink, Printer, UserRound } from "lucide-react";
 
 import { useLanguage } from "@/components/language-provider";
+import type { StringKey } from "@/lib/i18n/keys";
+import type { Translate } from "@/lib/i18n";
 import { useProfile } from "@/components/profile-sheet";
 import { Button } from "@/components/ui/button";
 import { ButtonLink } from "@/components/ui/button-link";
@@ -41,9 +43,36 @@ interface Pack {
   fields: Field[];
   documents: { text: string }[];
   steps: string[];
-  notes: string[];
+  notes: { code: string; text: string }[];
   filled: number;
   total: number;
+}
+
+
+/* ---------------------------------------------------------------------------
+ * The server sends English, and a stable key alongside it.
+ *
+ * The pack is built in Python, which speaks five languages; the interface
+ * speaks thirteen. Rendering the server's `label` directly is why a Hindi page
+ * listed "Full name (as on your documents)" and "Father's / husband's name" in
+ * English, and ended with an English paragraph about not paying anyone a fee.
+ *
+ * Translating on the key here moves those strings into the interface's own
+ * catalogue, where all thirteen exist. The English stays as the fallback —
+ * WhatsApp and the printed sheet have no translation layer, and a field label
+ * nobody has translated yet must read as a field label, never as `field.dob`.
+ * ------------------------------------------------------------------------ */
+
+function fieldLabel(field: Field, t: Translate): string {
+  const key = `field.${field.key}` as StringKey;
+  const translated = t(key);
+  return translated === key ? field.label : translated;
+}
+
+function noteText(note: { code: string; text: string }, t: Translate): string {
+  const key = `apply.note.${note.code}` as StringKey;
+  const translated = t(key);
+  return translated === key ? note.text : translated;
 }
 
 export function ApplicationPack({ slug }: { slug: string }) {
@@ -124,7 +153,9 @@ export function ApplicationPack({ slug }: { slug: string }) {
               key={f.key}
               className="grid gap-x-6 gap-y-1 border-b border-border py-2.5 sm:grid-cols-[15rem_1fr]"
             >
-              <dt className="text-sm text-muted-foreground">{f.label}</dt>
+              <dt className="text-sm text-muted-foreground">
+                {fieldLabel(f, t)}
+              </dt>
               <dd
                 className={cn(
                   "text-sm",
@@ -185,12 +216,12 @@ export function ApplicationPack({ slug }: { slug: string }) {
       {/* ----------------------------------------------------------- notes */}
       {pack.notes.length ? (
         <section className="space-y-2">
-          {pack.notes.map((n, i) => (
+          {pack.notes.map((n) => (
             <p
-              key={i}
+              key={n.code}
               className="border-s-2 border-gold bg-gold-soft px-4 py-2.5 text-sm leading-relaxed text-gold-ink"
             >
-              {n}
+              {noteText(n, t)}
             </p>
           ))}
         </section>

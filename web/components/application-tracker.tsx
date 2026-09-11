@@ -95,16 +95,17 @@ function todaySnapshot(): number {
 const todayServerSnapshot = (): number => 0;
 
 export function ApplicationTracker({ className }: { className?: string }) {
-  const applications = useSyncExternalStore(
-    subscribe,
-    getSnapshot,
-    getServerSnapshot,
-  );
+  const all = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  // Only the ones actually handed in. This tracker is a timeline of sanction
+  // and disbursement, and a scheme still being prepared has no such timeline —
+  // rendering one showed the same scheme twice on /track, once as "still
+  // getting ready" and again as "Applied 0 days ago", which it had not been.
+  const applications = all.filter((a) => a.status === "submitted");
   const [adding, setAdding] = useState(false);
 
   const add = (application: Omit<Application, "id" | "stageIndex" | "status">) => {
     save([
-      ...applications,
+      ...all,
       {
         ...application,
         id: crypto.randomUUID(),
@@ -146,13 +147,13 @@ export function ApplicationTracker({ className }: { className?: string }) {
             application={application}
             onAdvance={(stageIndex) =>
               save(
-                applications.map((a) =>
+                all.map((a) =>
                   a.id === application.id ? { ...a, stageIndex } : a,
                 ),
               )
             }
             onRemove={() =>
-              save(applications.filter((a) => a.id !== application.id))
+              save(all.filter((a) => a.id !== application.id))
             }
           />
         ))}
