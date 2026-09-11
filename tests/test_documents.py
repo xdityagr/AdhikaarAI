@@ -97,6 +97,39 @@ class TestTheModelsReplyIsNeverTrustedRaw:
             assert documents._normalise(label) == label
 
 
+class TestTheReplyShape:
+    """A multimodal turn returns `.content` as a LIST of content blocks, not a
+    string. The first version assumed a string, threw `'list' object has no
+    attribute 'strip'`, and the catch-all turned it into "that could not be read
+    just now" — so the feature was completely broken and looked merely unlucky.
+    Graceful degradation hid a total failure, which is the risk of a broad catch.
+    """
+
+    class _Reply:
+        def __init__(self, content):
+            self.content = content
+
+    def test_a_plain_string_reply(self):
+        assert documents._reply_text(self._Reply("Ration card")) == "Ration card"
+
+    def test_a_list_of_content_blocks(self):
+        reply = self._Reply([{"type": "text", "text": "Ration card"}])
+        assert documents._reply_text(reply) == "Ration card"
+
+    def test_a_list_of_bare_strings(self):
+        assert documents._reply_text(self._Reply(["Ration card"])) == "Ration card"
+
+    def test_an_empty_reply_is_a_string_not_a_crash(self):
+        assert documents._reply_text(self._Reply([])) == ""
+        assert documents._reply_text(self._Reply(None)) == ""
+
+    def test_the_shapes_all_normalise_to_the_same_label(self):
+        for content in ("Ration card", [{"type": "text", "text": "Ration card"}],
+                        ["Ration card"]):
+            text = documents._reply_text(self._Reply(content))
+            assert documents._normalise(text) == "Ration card"
+
+
 class TestHeldIsATriState:
     def test_nobody_asked_is_not_missing(self):
         """`None` must never render as "you do not have this". Someone who has

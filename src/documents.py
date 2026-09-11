@@ -128,6 +128,29 @@ _PROMPT = (
 )
 
 
+def _reply_text(reply: object) -> str:
+    """The text of a model reply, whichever shape it arrives in.
+
+    A multimodal turn comes back with `.content` as a LIST of content blocks,
+    not a string — which is how the first version of this failed, with
+    `'list' object has no attribute 'strip'` swallowed by the catch-all and
+    surfaced to the person as "that could not be read just now". The bug was
+    invisible precisely because the degradation was graceful.
+    """
+    content = getattr(reply, "content", reply)
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        parts = []
+        for block in content:
+            if isinstance(block, str):
+                parts.append(block)
+            elif isinstance(block, dict) and isinstance(block.get("text"), str):
+                parts.append(block["text"])
+        return " ".join(parts)
+    return str(content or "")
+
+
 #: A compliant reply is a label. Beyond this many words it is a sentence, and a
 #: sentence is the model declining to follow the contract — at which point a
 #: keyword hit inside it means nothing. "I think this might be a photograph of a
@@ -192,7 +215,7 @@ async def identify(image: bytes, content_type: str) -> Identification:
             {"type": "text", "text": _PROMPT},
             {"type": "image_url", "image_url": f"data:{mime};base64,{encoded}"},
         ])])
-        label = _normalise(getattr(reply, "content", "") or "")
+        label = _normalise(_reply_text(reply))
     except Exception:
         # A model outage must not break a checklist someone can tick themselves.
         logger.warning("Document identification failed", exc_info=True)
