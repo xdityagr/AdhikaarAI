@@ -35,6 +35,23 @@ DDL_STATEMENTS = [
         last_active_at TEXT NOT NULL
     )
     """,
+    # Who asked to be left alone.
+    #
+    # This was a module-level set() in whatsapp_consent.py, which meant a
+    # restart forgot it — and render.yaml names that as the one data loss here
+    # that is not merely inconvenient. Messaging someone who sent STOP is not a
+    # degraded experience, it is the thing the file exists to prevent.
+    #
+    # A row per number rather than a set of the opted-out, because opting back
+    # IN is also a decision worth keeping: a deleted row and a never-seen number
+    # are indistinguishable, and the alert layer will want to tell them apart.
+    """
+    CREATE TABLE IF NOT EXISTS consent (
+        user_id TEXT PRIMARY KEY,
+        opted_out INTEGER NOT NULL DEFAULT 0,
+        updated_at TEXT NOT NULL
+    )
+    """,
     """
     CREATE TABLE IF NOT EXISTS processed_messages (
         message_id TEXT PRIMARY KEY,
@@ -224,6 +241,35 @@ async def mark_message_processed(db: aiosqlite.Connection, message_id: str) -> N
     await db.execute(
         "INSERT OR IGNORE INTO processed_messages (message_id, processed_at) VALUES (?, ?)",
         (message_id, now),
+    )
+    await db.commit()
+
+
+# ---------------------------------------------------------------------------
+# Consent
+# ---------------------------------------------------------------------------
+
+async def load_opted_out(db: aiosqlite.Connection) -> set[str]:
+    """Every number that has asked to be left alone.
+
+    Read once at startup into the in-memory set the hot path checks. The set is
+    small — it is the people who said STOP — and `has_opted_out` is consulted on
+    every inbound message and on every candidate of every alert run, so it must
+    not be a query.
+    """
+    cursor = await db.execute("SELECT user_id FROM consent WHERE opted_out = 1")
+    return {row[0] for row in await cursor.fetchall()}
+
+
+async def set_consent(db: aiosqlite.Connection, user_id: str,
+                      opted_out: bool) -> None:
+    """Record a STOP or a START, durably, before we act on it."""
+    now = datetime.now(timezone.utc).isoformat()
+    await db.execute(
+        """INSERT INTO consent (user_id, opted_out, updated_at) VALUES (?, ?, ?)
+           ON CONFLICT(user_id) DO UPDATE SET
+             opted_out=excluded.opted_out, updated_at=excluded.updated_at""",
+        (user_id, int(opted_out), now),
     )
     await db.commit()
 

@@ -236,7 +236,7 @@ async def reply(user_id: str, text: str) -> str:
     """
     # Before anything else. STOP is not a feature to be reached after the
     # interesting code has run.
-    gate = consent.check(user_id, text)
+    gate = await consent.check(user_id, text)
     if gate is not None:
         if gate:
             _HISTORY.pop(user_id, None)

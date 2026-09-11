@@ -28,6 +28,7 @@ from fastapi.responses import FileResponse, HTMLResponse
 
 from src.config import get_settings
 from src.database import init_database
+from src import whatsapp_consent as consent
 from src.api import router as api_router
 from src.webhook import router as webhook_router, set_message_queue
 from src.worker import MessageWorker
@@ -72,6 +73,12 @@ async def lifespan(app: FastAPI):
 
     # 1. Initialize database
     await init_database()
+
+    # 1a. Read the opt-out list into memory before a single message is handled.
+    # The webhook starts accepting as soon as this function returns, so loading
+    # it later would leave a window in which somebody who sent STOP last week
+    # gets answered — which is exactly the failure the table was added to end.
+    await consent.load()
 
     # 2. Create the message queue
     message_queue = asyncio.Queue()
