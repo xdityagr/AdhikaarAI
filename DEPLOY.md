@@ -47,6 +47,12 @@ nothing to show for it.
 New → Blueprint → point it at this repository. `render.yaml` is picked up
 automatically.
 
+**Already deployed:** `adhikaar-api`, in Singapore, on the free plan —
+<https://adhikaar-api-vcnc.onrender.com>. Render appends a random suffix to new
+`onrender.com` subdomains, so the host is `adhikaar-api-vcnc`, not `adhikaar-api`.
+That URL is what `WEBHOOK_BASE_URL`, the Vercel variables in §4 and Meta's
+callback in §5 all have to agree on.
+
 Then set the secrets in the dashboard (they are marked `sync: false`, so they
 are never in git):
 
@@ -79,7 +85,7 @@ message after a quiet period is dropped. Meta retries, so nothing is lost — bu
 the reply arrives minutes late, which on a demo looks broken.
 
 Fix it with an external ping every 10 minutes — cron-job.org or UptimeRobot,
-both free — hitting `https://your-service.onrender.com/health`.
+both free — hitting `https://adhikaar-api-vcnc.onrender.com/health`.
 
 **The filesystem is ephemeral.** See below.
 
@@ -165,7 +171,7 @@ Import the repository, set the root directory to `web/`, and add one
 environment variable:
 
 ```
-ADHIKAAR_API_ORIGIN = https://adhikaar-api.onrender.com
+ADHIKAAR_API_ORIGIN = https://adhikaar-api-vcnc.onrender.com
 ```
 
 `web/next.config.ts` already reads it. Nothing else needs configuring — no
@@ -185,7 +191,7 @@ So that one route goes straight from the browser to Render. Two settings:
 
 ```
 # Vercel
-NEXT_PUBLIC_ADHIKAAR_STREAM_ORIGIN = https://adhikaar-api.onrender.com
+NEXT_PUBLIC_ADHIKAAR_STREAM_ORIGIN = https://adhikaar-api-vcnc.onrender.com
 
 # Render
 ADHIKAAR_ALLOWED_ORIGINS = https://your-project.vercel.app
@@ -214,7 +220,7 @@ and add CORS for it. Everything else keeps going through the proxy.
 Meta's callback URL has to move off ngrok and onto the Render URL:
 
 ```
-https://adhikaar-api.onrender.com/webhook/whatsapp
+https://adhikaar-api-vcnc.onrender.com/webhook/whatsapp
 ```
 
 App Dashboard → WhatsApp → Configuration → Edit. Verify token is whatever you
