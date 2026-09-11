@@ -222,6 +222,27 @@ class TestStepsSurviveTranslation:
         assert "[" not in item and "]" not in item
         assert "https://x.gov.in" in item
 
+    @pytest.mark.parametrize("raw,expected", [
+        # `_MANGLED_BOLD` turns the translated `* * * *` into `****`, which the
+        # paired-bold pass does not match because it is not a pair.
+        ("**** The interested applicant should visit the office.",
+         "The interested applicant should visit the office."),
+        # A blockquote survives both the bullet and the bold pass untouched.
+        ("> Note: carry the original documents.",
+         "Note: carry the original documents."),
+        # And the one that hid: `&gt;` is not a `>` until html.unescape has
+        # run, so stripping markers before it left 2,058 English steps still
+        # starting with a blockquote that did not exist yet when the strip ran.
+        ("&gt; Repayment of Loan: the first instalment falls due in month four.",
+         "Repayment of Loan: the first instalment falls due in month four."),
+        ("__Submit the form at the counter.__",
+         "Submit the form at the counter."),
+    ])
+    def test_no_markdown_marker_reaches_the_reader(self, raw, expected):
+        """They arrive as punctuation in the middle of an instruction somebody
+        is trying to follow."""
+        assert application.parse_list(raw) == [expected]
+
     def test_a_number_in_prose_is_not_mistaken_for_a_step(self):
         """The label pattern is deliberately narrow: a word, a small number, a
         colon. Prose that merely contains a figure must not be chopped up."""

@@ -261,6 +261,22 @@ def parse_list(markdown: Optional[str], limit: int = 24) -> list[str]:
             text = re.sub(r"<[^>]{1,40}>", " ", text)
             text = html.unescape(text)
             text = re.sub(r"\s{2,}", " ", text).strip()
+            # Markers left over at either end, stripped LAST.
+            #
+            # `**bold**` is removed as a pair and `* item` as a bullet, but
+            # neither catches an unpaired run — and `_MANGLED_BOLD` turns the
+            # translated `* * * *` into `****`, which is not a pair either. A
+            # blockquote `>` survives both passes untouched.
+            #
+            # Last, because `html.unescape` above turns `&gt;` into `>`: doing
+            # this before it left 2,058 English steps still beginning with a
+            # blockquote marker that did not exist yet when the strip ran.
+            #
+            # They reach the page as punctuation in the middle of instructions
+            # somebody is trying to follow: "**** The interested applicant
+            # should visit…".
+            text = re.sub(r"^[*_>\s]+", "", text)
+            text = re.sub(r"[*_\s]+$", "", text)
             if len(text) > 2:
                 items.append(text)
             if len(items) >= limit:

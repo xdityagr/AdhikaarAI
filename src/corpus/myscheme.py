@@ -81,7 +81,22 @@ PAGE_SIZE = 100          # the API's hard maximum; larger returns malformed data
 THROTTLE_SECONDS = 0.7   # ~1.5 req/s
 REQUEST_TIMEOUT = 30.0
 
-LANGUAGES = ("en", "hi", "mr", "bn", "ta")
+#: Every language the product speaks, derived rather than restated.
+#:
+#: This was its own five-entry tuple — en, hi, mr, bn, ta — while `src/i18n.py`
+#: listed thirteen. Two lists meaning "the languages we support", and this one
+#: decided what the ingest actually fetched, so the other eight existed only if
+#: somebody remembered to pass `--langs`.
+#:
+#: Urdu is what that cost. It had zero rows, which was read as "myScheme does
+#: not publish Urdu" and written into a handoff document as fact. It publishes
+#: Urdu in full — name, brief, benefits, eligibility and the application
+#: process. Nobody had ever asked for it.
+#:
+#: `src.i18n` imports nothing from `src`, so deriving from it cannot cycle.
+from src.i18n import LANGUAGES as _UI_LANGUAGES        # noqa: E402
+
+LANGUAGES = tuple(_UI_LANGUAGES)
 
 # Facets worth crawling. Deliberately EXCLUDES beneficiaryState, schemeCategory,
 # level, ministry and tags — those already come back on every search hit during
