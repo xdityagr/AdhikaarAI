@@ -33,6 +33,7 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from src import handoff
 from src import interview
 from src import voice
 from src import whatsapp_brain as brain
@@ -741,3 +742,94 @@ class TestTheCallDoor:
         locales = Path(__file__).resolve().parents[1] / "web" / "lib" / "i18n" / "locales"
         for path in locales.glob("*.ts"):
             assert '"call.safety"' in path.read_text(encoding="utf-8"), path.stem
+
+
+# ---------------------------------------------------------------------------
+# Carrying a website session onto the call
+# ---------------------------------------------------------------------------
+
+class TestResumeFromWeb:
+    """Someone who answered six questions on the site and then rang us.
+
+    They must not be asked their state again. Being asked twice is the clearest
+    possible signal that nobody was listening, and on a call it costs them
+    minutes they are paying for.
+    """
+
+    @pytest.mark.parametrize("said,expected", [
+        ("YS-ABC234", "YS-ABC234"),
+        ("ys abc234", "YS-ABC234"),
+        ("my code is YS ABC234 thanks", "YS-ABC234"),
+        ("Y-S-A-B-C-2-3-4", "YS-ABC234"),
+        # Spoken digits, which a transcriber writes as words as often as numerals.
+        ("Y S A B C two three four", "YS-ABC234"),
+    ])
+    def test_it_reads_a_code_the_way_people_say_it(self, said, expected):
+        assert voice.spoken_code(said) == expected
+
+    @pytest.mark.parametrize("said", [
+        "Y S dash A B C two three four",
+        "the code was ys hyphen abc two three four",
+    ])
+    def test_the_separator_spoken_aloud_is_not_read_as_the_code(self, said):
+        """D, A, S and H are all valid code characters, so "dash" flattened
+        into the body and produced `YS-DASHAB` — a wrong code indistinguishable
+        from a right one, which the caller is then told has expired."""
+        assert voice.spoken_code(said) == "YS-ABC234"
+
+    @pytest.mark.parametrize("said", [
+        "YS-ABC23",          # too short
+        "no code here",
+        "YS ABC2O4",         # O is not in the alphabet — refuse, never guess
+        "",
+    ])
+    def test_it_refuses_rather_than_guesses(self, said):
+        assert voice.spoken_code(said) is None
+
+    async def test_a_code_carries_the_website_s_answers_onto_the_call(self):
+        number = "919000000701"
+        code = await handoff.create({"state": "Bihar", "caste": "sc",
+                                     "occupation": "Farmer"})
+
+        say, detail = await voice.resume_from_web(number, f"my code is {code}")
+
+        assert detail["resumed"] is True
+        assert "not ask you that again" in say
+        assert brain._CONTEXT[number]["state"] == "Bihar"
+        assert brain._CONTEXT[number]["caste"] == "sc"
+        # And the matcher sees it without the model repeating it back to us.
+        assert voice.known_facets(number).occupation == "Farmer"
+
+    async def test_a_code_is_good_once(self):
+        number = "919000000702"
+        code = await handoff.create({"state": "Kerala"})
+
+        first = await voice.resume_from_web(number, code)
+        second = await voice.resume_from_web(number, code)
+
+        assert first[1]["resumed"] is True
+        assert second[1]["resumed"] is False
+
+    async def test_a_spent_code_does_not_become_an_error_lecture(self):
+        """The caller does not know what a handoff code is. They know they used
+        the website. So we move on and ask them directly."""
+        say, detail = await voice.resume_from_web("919000000703", "YS-ZZZZZZ")
+        assert detail["resumed"] is False
+        assert "ask you directly" in say
+
+    async def test_an_unreadable_code_asks_again_rather_than_claiming(self):
+        say, detail = await voice.resume_from_web("919000000704", "erm, hello?")
+        assert detail["retry"] is True
+        assert "one character at a time" in say
+
+    async def test_it_is_reachable_over_the_signed_route(self, client):
+        number = "919000000705"
+        code = await handoff.create({"state": "Odisha"})
+
+        body = envelope("resume_from_web", {"code": code}, number=f"+{number}")
+        response = client.post("/api/voice/tools/resume_from_web",
+                               content=body, headers=signed(body))
+
+        assert response.status_code == 200
+        assert result_of(response)["detail"]["resumed"] is True
+        assert brain._CONTEXT[number]["state"] == "Odisha"

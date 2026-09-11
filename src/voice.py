@@ -63,11 +63,13 @@ import hmac
 import inspect
 import json
 import logging
+import re
 import time
 from typing import Any, Mapping, Optional
 
 from fastapi import APIRouter, HTTPException, Request
 
+from src import handoff
 from src import whatsapp_brain as brain
 from src import whatsapp_consent as consent
 from src import interview
@@ -323,7 +325,7 @@ TIER_1 = ("find_schemes", "check_scheme_eligibility", "find_offices")
 TIER_2 = ("lookup_scheme", "search_schemes", "price_loan", "corpus_stats")
 
 #: Built here rather than wrapped, because they have no web equivalent.
-NATIVE = ("next_question", "answer_question", "answer_faq")
+NATIVE = ("next_question", "answer_question", "answer_faq", "resume_from_web")
 
 #: Named so the refusal is explicit and testable rather than an absence someone
 #: later reads as an oversight and "fixes".
@@ -663,6 +665,106 @@ def answer_faq(slug: str, question: str, language: str = "en") -> tuple[str, dic
 
 
 # ---------------------------------------------------------------------------
+# Carrying a website session onto the call
+#
+# A caller who has used WhatsApp is already recognised — the phone number is the
+# key and `user_context` holds what they told us, whichever channel taught us.
+# Somebody who has only used the WEBSITE is a different case: the site never
+# learns a phone number, so there is nothing to key on until they ring, and by
+# then the browser session is somewhere else entirely.
+#
+# `src/handoff.py` already solved this for WhatsApp, and solved it in a shape
+# that was clearly meant to end up here: the code's alphabet omits O/0 and
+# I/1/L because "people read these aloud". It has simply never been read aloud.
+# This is the tool that lets them.
+# ---------------------------------------------------------------------------
+
+#: A transcriber writes digits as words about as often as as numerals, and the
+#: code's alphabet contains 2-9. Nothing here guesses at letters: the alphabet
+#: was chosen to avoid the pairs that are actually confusable by ear.
+_SPOKEN_DIGITS = {
+    "TWO": "2", "THREE": "3", "FOUR": "4", "FIVE": "5",
+    "SIX": "6", "SEVEN": "7", "EIGHT": "8", "NINE": "9",
+}
+
+#: The separator, when it is said out loud rather than heard as punctuation.
+#:
+#: This one is not politeness, it is a correctness fix. D, A, S and H are all
+#: valid code characters, so "Y S dash A B C two three four" flattened to
+#: YSDASHABC234 and read back as `YS-DASHAB` — a wrong code that looks exactly
+#: like a right one, which the caller is then told has expired. Being told your
+#: code is expired when it was misheard is worse than being asked to repeat it.
+_SPOKEN_SEPARATORS = ("DASH", "HYPHEN", "MINUS")
+
+
+def spoken_code(said: str) -> Optional[str]:
+    """Read a handoff code out of something a person said down a phone.
+
+    `handoff.find` wants the literal `YS-` and the exact six characters, which
+    is right for a pasted message and wrong for speech: what arrives is "Y S
+    dash A B C two three four", or "ys abc234", or the same with the dash heard
+    as a word. So the text is flattened to letters and digits first and the
+    marker looked for inside it.
+
+    Returns the canonical `YS-XXXXXX`, so everything downstream — including
+    `handoff.claim` — sees exactly what the website minted.
+    """
+    if not said:
+        return None
+
+    text = said.upper()
+    for word, digit in _SPOKEN_DIGITS.items():
+        text = re.sub(rf"\b{word}\b", digit, text)
+    for word in _SPOKEN_SEPARATORS:
+        text = re.sub(rf"\b{word}\b", " ", text)
+
+    squashed = re.sub(r"[^A-Z0-9]", "", text)
+    marker = handoff.PREFIX
+    for match in re.finditer(marker, squashed):
+        body = squashed[match.end():match.end() + handoff.LENGTH]
+        if len(body) == handoff.LENGTH and all(c in handoff.ALPHABET for c in body):
+            return f"{marker}-{body}"
+    return None
+
+
+async def resume_from_web(number: str, said: str) -> tuple[str, dict]:
+    """Redeem a code read out on the call, and carry the session onto it.
+
+    Someone who answered six questions on the website and then rang us must not
+    be asked their state again — being asked twice is the clearest possible
+    signal that nobody was listening, and on a call it costs them minutes they
+    are paying for.
+
+    A code that is unknown, spent or stale is not an error worth explaining. The
+    caller does not know what a handoff code is; they know they used the website.
+    So the reply moves on and the interview simply starts from what we know.
+    """
+    code = spoken_code(said)
+    if code is None:
+        return ("I did not catch that code — could you read it again, "
+                "one character at a time?",
+                {"retry": True, "reason": "unreadable"})
+
+    entry = await handoff.claim(code)
+    if entry is None:
+        return ("That code has already been used or has expired. "
+                "No matter — I can ask you directly.",
+                {"resumed": False, "code": code, "reason": "expired_or_spent"})
+
+    carried = {key: value for key, value in (entry.context or {}).items()
+               if value not in (None, "", [])}
+    if number and carried:
+        brain._CONTEXT[number].update(carried)
+
+    logger.info("Call from %s resumed from the website (%s)",
+                (number or "unknown")[:6] + "…",
+                ", ".join(sorted(carried)) or "no context")
+
+    return ("I have what you told the website — I will not ask you that again.",
+            {"resumed": True, "code": code, "carried": sorted(carried)})
+
+
+# ---------------------------------------------------------------------------
 # Routes
 # ---------------------------------------------------------------------------
 
@@ -708,9 +810,19 @@ async def call_tool(name: str, request: Request) -> dict:
         calls = [{"id": "", "name": name, "arguments": _arguments(
             (message.get("arguments") if isinstance(message, dict) else None))}]
 
+    # The one tool that touches the database, so the one that cannot run inside
+    # the synchronous dispatcher below. Done first, and its answer handed to it.
+    resumed: dict[str, tuple[str, dict]] = {}
+    if name == "resume_from_web":
+        for call in calls:
+            said = str((call.get("arguments") or {}).get("code") or "")
+            resumed[call.get("id") or ""] = await resume_from_web(number, said)
+
     def produce(call: dict) -> tuple[str, dict]:
         arguments = call.get("arguments") or {}
 
+        if name == "resume_from_web":
+            return resumed[call.get("id") or ""]
         if name == "next_question":
             return next_question(number)
         if name == "answer_question":
