@@ -63,6 +63,25 @@ export const en = {
   "home.cats.cta": "Browse all {count} schemes",
   "home.wa.h2": "No app. Just WhatsApp.",
   "home.wa.body": "Scan the code and the same assistant answers on your phone, in your language — voice notes included. Nothing to install, and nothing to sign up for.",
+  // ---- what it can do now ----
+  //
+  // Four capabilities that had landed and were reachable only by knowing the
+  // URL. Written as what a person gets, not as what was built: "a pension for
+  // one, a scholarship for another" rather than "household mode".
+  "home.does.h2": "More than one person, more than one scheme",
+  "home.does.lede": "Most households are owed several things at once, and the rules that decide them are written in prose nobody reads. Here is what this does about that.",
+  "home.does.household.title": "Everyone under one roof, at once",
+  "home.does.household.body": "A pension for one person, a scholarship for another and a tool kit for a third are three schemes with three rule sets. Add your family once and each of them is checked separately — grouped by scheme, so one scholarship three children qualify for is one row, not three.",
+  "home.does.household.cta": "Check my household",
+  "home.does.rules.title": "The conditions hidden in the prose",
+  "home.does.rules.body": "Land ceilings and “must not own a pucca house” appear in no government data field — only inside a paragraph. We read them out, one scheme at a time, by hand-checked rule and never by a language model, and show you the sentence each one came from.",
+  "home.does.rules.cta": "Browse every scheme",
+  "home.does.alerts.title": "Told when something opens",
+  "home.does.alerts.body": "Schemes appear and change. If a new one names people like you, we can say so on WhatsApp — only when it is aimed at you rather than open to everybody, and never more than a note asking if you want to hear it. One word stops it for good.",
+  "home.does.alerts.cta": "Ask on WhatsApp",
+  "home.does.counter.title": "Help at a counter, if you want it",
+  "home.does.counter.body": "Filling the form is the part people give up on. You can hand your answers to a CSC operator or an NGO worker with a short code you read aloud — they see only what you chose to share, only while you allow it, and you can take it back with the same code.",
+  "home.does.counter.cta": "Start with your answers",
   "home.final.h2": "Find out in two minutes",
   "home.final.body": "Answer only what you are comfortable answering. You will get a ranked list with the reason for every match, and the nearest place that can actually pay.",
   "home.final.cta": "Start",

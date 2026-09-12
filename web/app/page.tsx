@@ -4,6 +4,7 @@ import { CategoryGrid } from "@/components/category-grid";
 import { Marked } from "@/components/marked";
 import { Ornament } from "@/components/ornament";
 import { Reveal } from "@/components/reveal";
+import { WhatItDoes } from "@/components/what-it-does";
 import { ScrollCue } from "@/components/scroll-cue";
 import { WhatsAppDoor, WhatsAppQrPanel } from "@/components/whatsapp-door";
 import { ButtonLink } from "@/components/ui/button-link";
@@ -122,6 +123,8 @@ export default async function HomePage() {
       </section>
 
       {/* -------------------------------------------------------------- WhatsApp */}
+      <WhatItDoes t={t} />
+
       <section className="mx-auto max-w-6xl px-5 py-20 sm:px-6 sm:py-24">
         <Reveal className="relative overflow-hidden rounded-[1.75rem] bg-forest-deep px-7 py-11 text-[#dcede4] sm:px-12 sm:py-14">
           <div
