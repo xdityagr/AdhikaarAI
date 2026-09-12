@@ -197,6 +197,17 @@ CORS, no API URL in client code.
 Also set `NEXT_PUBLIC_WHATSAPP_NUMBER` to the WhatsApp number in E.164, or the
 QR panels render a "not configured yet" placeholder.
 
+`NEXT_PUBLIC_HELPLINE_NUMBER` is the phone door and behaves differently on
+purpose: left empty, the "Call and ask" button does not render at all. The
+WhatsApp placeholder is a developer affordance on the primary channel; a call
+button that cannot place a call is a promise broken in public.
+
+Set it only once a number actually answers — `python scripts/provision_voice.py
+--language hi --attach-number` is what makes that true. If the number is not
+Indian the door warns about international rates before it shows the digits,
+because many Indian prepaid plans bar ISD and the people this channel exists
+for are the ones who cannot absorb the charge.
+
 ### The streaming route does not go through the proxy
 
 An assistant turn takes about twenty seconds. Vercel's Hobby plan cuts a

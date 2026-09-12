@@ -579,4 +579,16 @@ export const en = {
   "documents.capture.unreadable": "That photo could not be read. Try another one.",
   "documents.capture.close": "Close",
   "site.title": "Yojna Setu — find the schemes you actually qualify for",
+  // --- The phone door ---------------------------------------------------
+  "call.open": "Call and ask",
+  "call.title": "Call and ask",
+  "call.body": "Ring this number and just speak. No smartphone needed — any phone will do, and there is nothing to install.",
+  "call.helpline": "Helpline",
+  "call.scanHint": "Scan the code, or dial the number",
+  "call.languages": "Answers in",
+  "call.otherLanguage": "The phone line does not answer in your language yet. On WhatsApp it does.",
+  "call.international": "This is not an Indian number yet. Your operator will charge international rates, and some prepaid plans block such calls.",
+  "call.launch": "Call now",
+  "call.dismiss": "Not now",
+  "call.safety": "We never ask for your Aadhaar number, bank details or an OTP. A call that does is not us."
 } as const;

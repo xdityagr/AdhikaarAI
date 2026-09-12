@@ -144,6 +144,25 @@ _NATIVE_SCHEMAS = {
         ),
         "parameters": {"type": "object", "properties": {}},
     },
+    "resume_from_web": {
+        "name": "resume_from_web",
+        "description": (
+            "Carry over a session the caller started on the website. If they "
+            "mention they were just on the site, or already answered questions "
+            "there, ask whether they have a code beginning YS and send exactly "
+            "what they say. Everything they told the website is then known and "
+            "must not be asked again. If it asks you to retry, you misheard the "
+            "code — ask for it one character at a time."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "code": {"type": "string",
+                         "description": "What the caller said, verbatim"},
+            },
+            "required": ["code"],
+        },
+    },
     "answer_faq": {
         "name": "answer_faq",
         "description": (
@@ -246,7 +265,7 @@ def build(language: str, base: str, secret: str) -> dict:
 #: Tier 1 first — the interview leads, because it is the piece that makes a call
 #: better than the website rather than a worse copy of it.
 _TOOL_ORDER = [
-    "next_question", "answer_question",
+    "resume_from_web", "next_question", "answer_question",
     "find_schemes", "check_scheme_eligibility", "find_offices", "answer_faq",
     "lookup_scheme", "search_schemes", "price_loan", "corpus_stats",
 ]
