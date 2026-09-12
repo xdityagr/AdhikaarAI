@@ -879,6 +879,24 @@ async def call_event(request: Request) -> dict:
             _ASKED.pop(number, None)
             logger.info("Call with %s ended (%s)", number[:6] + "…", status or kind)
 
+    # The transcript rides along on `end-of-call-report` — Vapi calls the
+    # bundle the call's ARTIFACT — and it is the only record a finished call
+    # leaves, because RECORDING_POLICY is "none".
+    #
+    # Discarded unless explicitly asked for, and that default is the point: a
+    # transcript holds what somebody said about their caste, their income and
+    # who lives in their house, and the whole reason nothing is recorded is
+    # that we do not want to be holding it. The switch exists so a
+    # verification call can be read back once — the spike's Hindi and Tamil
+    # transcripts have to come from somewhere — and is documented as something
+    # to turn off again.
+    if kind == "end-of-call-report" and get_settings().voice_log_transcripts:
+        artifact = message.get("artifact") or {}
+        transcript = (artifact.get("transcript")
+                      or message.get("transcript") or "")
+        if transcript:
+            logger.info("TRANSCRIPT %s\n%s", number[:6] + "…", transcript)
+
     return {"received": True}
 
 

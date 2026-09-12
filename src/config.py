@@ -187,6 +187,15 @@ class Settings(BaseSettings):
         default="",
         description="Vapi's id for the provisioned inbound number (not the number)",
     )
+    voice_log_transcripts: bool = Field(
+        default=False,
+        description="Log the transcript from Vapi's end-of-call report. OFF by "
+                    "default and must stay off in production: a transcript "
+                    "holds what a person said about their caste, their income "
+                    "and their household, and RECORDING_POLICY is 'none' "
+                    "precisely so none of that is kept. Turn it on only to "
+                    "capture a verification call, then turn it off.",
+    )
     vapi_signature_header: str = Field(
         default="x-vapi-signature",
         description="Header carrying the HMAC-SHA256 of the raw body, when the "
