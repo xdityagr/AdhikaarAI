@@ -432,6 +432,12 @@ def _match_option(question: "Question", text: str) -> Optional[Any]:
     wanted = norm(text)
     if not wanted:
         return None
+    # Yes/No is handled below, where it becomes a real boolean. Matching it
+    # here would hand back the string "yes", and `Facets.is_bpl` is a bool —
+    # a truthy string passes every `if`, so nothing would look broken until
+    # somebody who said no was matched as if they had said yes.
+    if {o.value for o in question.options} == {"yes", "no"}:
+        return None
     for option in question.options:
         label = norm(getattr(option, "label", "") or "")
         value = norm(str(option.value))

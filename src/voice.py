@@ -292,6 +292,55 @@ def caller_number(message: dict) -> str:
     return "".join(character for character in raw if character.isdigit())
 
 
+#: Markdown, on its way to a text-to-speech engine.
+#:
+#: The corpus is markdown and the web renders it. A voice model reads it out,
+#: and "**Step 1:**" becomes "star star Step one colon star star" — or, worse,
+#: a pause where the caller expects an instruction. `lookup_scheme` returns the
+#: application steps exactly as published, which is right for a screen and
+#: unusable on a phone.
+_SPEAKABLE = [
+    # Bold and emphasis: keep the words, drop the markers.
+    (re.compile(r"\*\*(.+?)\*\*"), r"\1"),
+    # A link is a URL nobody can act on while holding a phone to their
+    # ear. The words stay; the address goes.
+    (re.compile(r"\[([^\]]+)\]\s*\([^)]*\)"), r"\1"),
+    (re.compile(r"https?://\S+"), ""),
+    # Headings, block quotes and bullets — punctuation for the eye.
+    (re.compile(r"^[ \t]*[#>*\-]+[ \t]*", re.M), ""),
+    (re.compile(r"[*_`]+"), ""),
+    # A paragraph break is a full stop when it is spoken.
+    (re.compile(r"\n{2,}"), ". "),
+    (re.compile(r"\s{2,}"), " "),
+]
+
+
+def speakable(value):
+    """The same content, with nothing in it that only makes sense on a screen.
+
+    Applied to every string a tool returns, however deeply nested, because the
+    model may read any of them aloud and the one that matters most — the
+    application steps — is the most heavily marked up.
+    """
+    if isinstance(value, str):
+        # A string with no whitespace is an identifier, a slug or a code —
+        # `prepare_application`, `pmay-u`, `YS-ABC234` — not something anybody
+        # reads aloud. Stripping markdown from those turned
+        # `prepare_application` into `prepareapplication` and broke the field
+        # the caller-facing refusal is keyed on. Prose has spaces in it.
+        if not any(ch.isspace() for ch in value):
+            return value
+        text = value
+        for pattern, replacement in _SPEAKABLE:
+            text = pattern.sub(replacement, text)
+        return text.strip()
+    if isinstance(value, dict):
+        return {key: speakable(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [speakable(item) for item in value]
+    return value
+
+
 def _results(calls: list[dict], produce) -> dict:
     """Run each call through `produce` and wrap it the way the provider wants.
 
@@ -308,7 +357,8 @@ def _results(calls: list[dict], produce) -> dict:
             spoken, detail = ("I could not look that up just now.", {})
         out.append({
             "toolCallId": call.get("id") or "",
-            "result": json.dumps({"say": spoken, "detail": detail},
+            "result": json.dumps({"say": speakable(spoken),
+                                  "detail": speakable(detail)},
                                  ensure_ascii=False, default=str),
         })
     return {"results": out}
