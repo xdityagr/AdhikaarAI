@@ -87,6 +87,34 @@ export const en = {
   // error — it is the whole reason the channel exists (PRD-v3 §6.4).
   "home.call.h3": "No smartphone? Call instead.",
   "home.call.body": "A number you can ring from any phone, including one that does not run apps. It answers in your language and asks the same questions — no internet, no download, nothing to sign up for.",
+  // ---- the operator panel ----
+  //
+  // Staff-facing, and the only screen in this product behind an account. The
+  // strings still live here and are still translated, because a CSC operator
+  // in Tamil Nadu reads Tamil — being staff does not make English their
+  // language.
+  "operator.eyebrow": "For CSC operators, NGO workers and agency staff",
+  "operator.h1": "Help someone apply",
+  "operator.lede": "Open a case the person in front of you has handed over, see only what they chose to share, and fill the form with them. They can take it back at any moment.",
+  "operator.signin": "Sign in",
+  "operator.email": "Email",
+  "operator.password": "Password",
+  "operator.signin.cta": "Sign in",
+  "operator.signin.note": "There is no sign-up. An administrator creates accounts, because an account here is permission to read other people's applications.",
+  "operator.signedInAs": "Signed in as {name}",
+  "operator.signout": "Sign out",
+  "operator.claim.title": "Open a case",
+  "operator.claim.hint": "Ask them to read out the code from their phone. Nothing about a person reaches this screen until they hand it over, and the same code lets them withdraw it.",
+  "operator.claim.cta": "Open",
+  "operator.cases": "Your open cases",
+  "operator.cases.empty": "Nothing open. Ask the person in front of you for their code — they will find it on the scheme they were reading.",
+  "operator.case.back": "Back to my cases",
+  "operator.case.noScheme": "No particular scheme yet",
+  "operator.case.language": "Speaks {language}",
+  "operator.case.answers": "What they chose to share",
+  "operator.case.noAnswers": "They shared nothing beyond the case itself.",
+  "operator.case.consent": "This is theirs, not ours. They can withdraw it from their own phone with the same code, and this closes when the form is filed — after which you will not be able to see it.",
+  "operator.case.close": "Mark as filed",
   "home.final.h2": "Find out in two minutes",
   "home.final.body": "Answer only what you are comfortable answering. You will get a ranked list with the reason for every match, and the nearest place that can actually pay.",
   "home.final.cta": "Start",
