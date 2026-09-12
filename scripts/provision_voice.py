@@ -125,7 +125,13 @@ def _tool(name: str, base: str, secret: str) -> dict:
             # dashboard reports as "assistant did not respond" and which is
             # otherwise a genuinely hard afternoon.
             "secret": secret,
-            "timeoutSeconds": 10,
+            # 20 is the provider's maximum and it is here for the cold start,
+            # not the query. The tools answer in milliseconds once the
+            # container is awake; the free plan spins down after 15 minutes
+            # idle and takes about 50 seconds to come back, and the first tool
+            # call of the first call after a quiet spell pays that. Ten seconds
+            # guaranteed it failed.
+            "timeoutSeconds": 20,
         },
     }
 

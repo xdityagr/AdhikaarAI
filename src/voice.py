@@ -420,6 +420,28 @@ def _accepted(implementation, arguments: dict) -> dict:
 #: `whatsapp_brain.py:302`, kept local so that module does not have to change.
 _ASKED: dict[str, set[str]] = {}
 
+#: The candidate scheme set per caller, and the answers it was computed from.
+#:
+#: `_candidates` is a full pass over the corpus, and the interview asks up to
+#: eight questions — so without this it ran eight times in one call. On a
+#: laptop that is 150 ms and invisible; on the 0.1-CPU container this deploys
+#: to it is 1.4 SECONDS, and a caller hears "just a second" between every
+#: question until they hang up. That is what they did.
+#:
+#: The set only changes when an ANSWER changes the facets, so it is keyed on
+#: the facets it was built from. Asking a question does not invalidate it;
+#: answering one does, and that is the only time the work is redone.
+_CANDIDATES: dict[str, tuple[tuple, set[str]]] = {}
+
+
+def _facet_key(facets: Facets) -> tuple:
+    """A hashable fingerprint of what we know, for the cache above."""
+    return tuple(sorted(
+        (field, str(value))
+        for field, value in vars(facets).items()
+        if value not in (None, "", [], {})
+    ))
+
 #: Session-scoped, so never written down. `categories` is what someone is
 #: looking for today, not a fact about them — carrying it into next month's call
 #: would silently filter that conversation to the last one's subject.
@@ -494,7 +516,15 @@ def next_question(number: str) -> tuple[str, dict]:
     facets = known_facets(number)
     asked = _ASKED.setdefault(number, set())
 
-    candidates = _candidates(facets)
+    # Recomputed only when the answers have moved. See `_CANDIDATES`.
+    key = _facet_key(facets)
+    cached = _CANDIDATES.get(number)
+    if cached is not None and cached[0] == key:
+        candidates = cached[1]
+    else:
+        candidates = _candidates(facets)
+        _CANDIDATES[number] = (key, candidates)
+
     question = interview.next_question(candidates, asked) if candidates else None
 
     if question is None:
@@ -877,6 +907,7 @@ async def call_event(request: Request) -> dict:
         status = (message.get("status") or message.get("endedReason") or "")
         if kind != "status-update" or status in ("ended", "forwarding"):
             _ASKED.pop(number, None)
+            _CANDIDATES.pop(number, None)
             logger.info("Call with %s ended (%s)", number[:6] + "…", status or kind)
 
     # The transcript rides along on `end-of-call-report` — Vapi calls the
