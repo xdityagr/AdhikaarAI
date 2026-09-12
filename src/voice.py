@@ -433,6 +433,16 @@ _ASKED: dict[str, set[str]] = {}
 #: answering one does, and that is the only time the work is redone.
 _CANDIDATES: dict[str, tuple[tuple, set[str]]] = {}
 
+#: The question we last read out to this caller.
+#:
+#: `answer_question` used to depend on the speaking model echoing the question's
+#: id back in its arguments. Models forget, abbreviate and capitalise, and every
+#: one of those arrived as "I lost track of that question" — to somebody who had
+#: just answered it out loud. The server knows perfectly well what it last
+#: asked, so it remembers, and the model's id is now a hint rather than a
+#: requirement.
+_PENDING: dict[str, str] = {}
+
 
 def _facet_key(facets: Facets) -> tuple:
     """A hashable fingerprint of what we know, for the cache above."""
@@ -528,10 +538,14 @@ def next_question(number: str) -> tuple[str, dict]:
     question = interview.next_question(candidates, asked) if candidates else None
 
     if question is None:
+        _PENDING.pop(number, None)
         return ("I have enough to look. Shall I tell you what you are entitled to?",
                 {"finished": True, "asked": sorted(asked)})
 
     asked.add(question.id)
+    # What we just asked, so the answer can find its way home without the model
+    # having to carry the id there and back. See `_PENDING`.
+    _PENDING[number] = question.id
     return (question.fallback_prompt, {
         "finished": False,
         "question_id": question.id,
@@ -557,7 +571,12 @@ def answer_question(number: str, question_id: str, answer: str) -> tuple[str, di
     exclude a scheme. Saying so is what makes it safe to ask about caste or
     disability at all.
     """
-    question = interview.BY_ID.get(question_id)
+    # Case-folded, because a model that returns "Age" means `age`, and falling
+    # back to the question we actually asked, because most of the time it
+    # returns nothing at all.
+    wanted = (question_id or "").strip().lower()
+    question = interview.BY_ID.get(wanted) or interview.BY_ID.get(
+        _PENDING.get(number, ""))
     if question is None:
         return "I lost track of that question. Let me ask again.", {"retry": True}
 
@@ -908,6 +927,7 @@ async def call_event(request: Request) -> dict:
         if kind != "status-update" or status in ("ended", "forwarding"):
             _ASKED.pop(number, None)
             _CANDIDATES.pop(number, None)
+            _PENDING.pop(number, None)
             logger.info("Call with %s ended (%s)", number[:6] + "…", status or kind)
 
     # The transcript rides along on `end-of-call-report` — Vapi calls the

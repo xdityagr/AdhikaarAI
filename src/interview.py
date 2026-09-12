@@ -365,6 +365,82 @@ def apply_answer(facets: Facets, question: Question, value: Any) -> Facets:
     return facets
 
 
+# ---------------------------------------------------------------------------
+# Reading an answer somebody SAID, rather than tapped
+#
+# The web offers chips and gets back exactly what it offered. A phone gets back
+# whatever the transcriber heard, in whatever language the caller speaks — so
+# "20" arrives as "बीस", as "मेरी उम्र बीस साल है", or as "२०". All three were
+# refused, and the caller was told their age could not be registered.
+# ---------------------------------------------------------------------------
+
+#: Indic digits folded to ASCII. `str.isdigit()` says २ is a digit; `int()`
+#: disagrees, which is the worst combination of the two.
+_ASCII_DIGITS = {chr(base + offset): str(offset)
+                 for base in (0x0966,   # Devanagari — hi, mr
+                              0x09E6,   # Bengali — bn, as
+                              0x0A66,   # Gurmukhi — pa
+                              0x0AE6,   # Gujarati — gu
+                              0x0B66,   # Odia — or
+                              0x0BE6,   # Tamil — ta
+                              0x0C66,   # Telugu — te
+                              0x0CE6,   # Kannada — kn
+                              0x0D66,   # Malayalam — ml
+                              0x0660)   # Arabic-Indic — ur
+                 for offset in range(10)}
+
+#: Spoken numbers, in the languages a caller is most likely to answer an age in.
+#: Deliberately not exhaustive: the speaking model is asked to send digits, and
+#: this is the safety net for when it forwards what it heard instead.
+NUMBER_WORDS: dict[str, int] = {}
+for _words, _value in [
+    (("one", "ek", "एक"), 1), (("two", "do", "दो"), 2),
+    (("three", "teen", "तीन"), 3), (("four", "char", "चार"), 4),
+    (("five", "paanch", "panch", "पांच"), 5), (("six", "chah", "छह"), 6),
+    (("seven", "saat", "सात"), 7), (("eight", "aath", "आठ"), 8),
+    (("nine", "nau", "नौ"), 9), (("ten", "das", "दस"), 10),
+    (("eleven", "gyarah", "गयारह"), 11), (("twelve", "barah", "बारह"), 12),
+    (("thirteen", "terah", "तेरह"), 13), (("fourteen", "chaudah", "चौदह"), 14),
+    (("fifteen", "pandrah", "पंद्रह"), 15), (("sixteen", "solah", "सोलह"), 16),
+    (("seventeen", "satrah", "सत्रह"), 17), (("eighteen", "atharah", "अठारह"), 18),
+    (("nineteen", "unnis", "उन्नीस"), 19), (("twenty", "bees", "बीस"), 20),
+    (("twenty five", "pachees", "पचीस"), 25), (("thirty", "tees", "तीस"), 30),
+    (("thirty five", "paintees", "पैंतीस"), 35), (("forty", "chalees", "चालीस"), 40),
+    (("forty five", "paintalees", "पैंतालीस"), 45), (("fifty", "pachaas", "पचास"), 50),
+    (("fifty five", "pachpan", "पचपन"), 55), (("sixty", "saath", "साठ"), 60),
+    (("sixty five", "painsath", "पैंसठ"), 65), (("seventy", "sattar", "सत्तर"), 70),
+    (("eighty", "assi", "अस्सी"), 80), (("ninety", "nabbe", "नब्बे"), 90),
+]:
+    for _word in _words:
+        NUMBER_WORDS[_word] = _value
+
+#: Longest first, so "twenty five" wins over "twenty".
+_NUMBER_WORDS_RE = re.compile(
+    "|".join(re.escape(w) for w in sorted(NUMBER_WORDS, key=len, reverse=True)))
+
+
+def _match_option(question: "Question", text: str) -> Optional[Any]:
+    """The option this answer IS, if the caller simply repeated one back.
+
+    Compared on the label as well as the value, because the label is what was
+    read aloud. Dashes are normalised because "31–45" is spoken and
+    transcribed with whichever hyphen the transcriber prefers.
+    """
+    def norm(value: str) -> str:
+        return re.sub(r"[\s‐-―-]+", "", (value or "").strip().lower())
+
+    wanted = norm(text)
+    if not wanted:
+        return None
+    for option in question.options:
+        label = norm(getattr(option, "label", "") or "")
+        value = norm(str(option.value))
+        if wanted in (label, value):
+            raw = str(option.value)
+            return int(raw) if raw.lstrip("-").isdigit() else option.value
+    return None
+
+
 def coerce(question: Question, raw: str) -> Optional[Any]:
     """Turn a chip value or a typed answer into what Facets wants.
 
@@ -375,6 +451,22 @@ def coerce(question: Question, raw: str) -> Optional[Any]:
     text = (raw or "").strip()
     if not text:
         return None
+
+    # Indic digits, folded to ASCII. A Hindi caller reading a figure off a card
+    # may say it and the transcriber may write it as २० — which `isdigit()`
+    # agrees is a digit and `int()` cannot read.
+    text = "".join(_ASCII_DIGITS.get(ch, ch) for ch in text)
+
+    # An OPTION the question itself offered, matched before anything else.
+    #
+    # This is the bug that made the voice interview unusable: the age question
+    # reads out "Under 14, 14–17, 18–30, 31–45 …", the caller says one of
+    # them back, and the number parser below turned "31–45" into 3145 and
+    # rejected it as out of range. The question was offering answers it could
+    # not accept.
+    chosen = _match_option(question, text)
+    if chosen is not None:
+        return chosen
 
     if question.probe == "land":
         # Zero is a real answer here and a meaningful one — landless households
@@ -390,10 +482,17 @@ def coerce(question: Question, raw: str) -> Optional[Any]:
         return acres if 0 <= acres < 10_000 else None
 
     if question.probe == "age" or question.input == "number":
-        digits = "".join(ch for ch in text if ch.isdigit())
-        if not digits:
-            return None
-        age = int(digits)
+        # The FIRST number, not every digit concatenated. "31-45" is a range
+        # somebody read aloud, and gluing it into 3145 is how a valid answer
+        # became an out-of-range one.
+        match = re.search(r"\d+", text)
+        if match is None:
+            spoken = _NUMBER_WORDS_RE.search(text.lower())
+            if spoken is None:
+                return None
+            age = NUMBER_WORDS[spoken.group()]
+        else:
+            age = int(match.group())
         return age if 0 < age < 120 else None
 
     if question.probe == "income" or question.input == "amount":
