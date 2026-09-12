@@ -14,6 +14,10 @@ const COLUMNS = [
     title: "footer.find",
     links: [
       { href: "/check", label: "nav.check" },
+      // The household view shipped and the footer never learned about it, so
+      // the only way to reach it was the header — which is where a link goes
+      // to be missed on a phone, behind a menu button.
+      { href: "/household", label: "nav.household" },
       { href: "/schemes", label: "nav.schemes" },
       { href: "/credit", label: "nav.credit" },
     ],
