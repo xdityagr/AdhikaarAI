@@ -7,6 +7,7 @@ import { Reveal } from "@/components/reveal";
 import { WhatItDoes } from "@/components/what-it-does";
 import { ScrollCue } from "@/components/scroll-cue";
 import { CallDoor } from "@/components/call-door";
+import { CALL_CONFIGURED } from "@/lib/call";
 import { WhatsAppDoor, WhatsAppQrPanel } from "@/components/whatsapp-door";
 import { ButtonLink } from "@/components/ui/button-link";
 import { getCatalogMeta } from "@/lib/api";
@@ -153,6 +154,27 @@ export default async function HomePage() {
                 variant="soft"
                 className="mt-7 bg-[#7adea8] text-[#052b1b] hover:bg-[#6cd39c]"
               />
+
+              {/* The other door, and the more important one for this audience.
+                  WhatsApp needs a smartphone; this needs a phone. It renders
+                  nothing at all when no number is published — an empty heading
+                  promising a helpline that does not answer is worse than no
+                  heading, so the divider goes inside the guard too. */}
+              {CALL_CONFIGURED ? (
+                <div className="mt-8 border-t border-white/10 pt-7">
+                  <h3 className="text-[1.0625rem] font-medium text-white">
+                    {t("home.call.h3")}
+                  </h3>
+                  <p className="mt-2 text-[0.9375rem] leading-relaxed text-[#9ebfb0]">
+                    {t("home.call.body")}
+                  </p>
+                  <CallDoor
+                    size="pill"
+                    variant="soft"
+                    className="mt-5 bg-white/10 text-[#dcede4] hover:bg-white/15"
+                  />
+                </div>
+              ) : null}
             </div>
             <WhatsAppQrPanel className="shrink-0 self-center lg:self-auto" />
           </div>

@@ -82,6 +82,11 @@ export const en = {
   "home.does.counter.title": "Help at a counter, if you want it",
   "home.does.counter.body": "Filling the form is the part people give up on. You can hand your answers to a CSC operator or an NGO worker with a short code you read aloud — they see only what you chose to share, only while you allow it, and you can take it back with the same code.",
   "home.does.counter.cta": "Start with your answers",
+  // The second door on the reach-us panel. WhatsApp needs a smartphone; this
+  // needs a phone, and in this audience that difference is not a rounding
+  // error — it is the whole reason the channel exists (PRD-v3 §6.4).
+  "home.call.h3": "No smartphone? Call instead.",
+  "home.call.body": "A number you can ring from any phone, including one that does not run apps. It answers in your language and asks the same questions — no internet, no download, nothing to sign up for.",
   "home.final.h2": "Find out in two minutes",
   "home.final.body": "Answer only what you are comfortable answering. You will get a ranked list with the reason for every match, and the nearest place that can actually pay.",
   "home.final.cta": "Start",

@@ -567,7 +567,7 @@ export function ChatPanel({
                   send(draft);
                 }
               }}
-              className="max-h-40 min-h-[2.75rem] flex-1 resize-none overflow-y-auto bg-transparent px-3 py-2.5 text-base leading-relaxed outline-none [scrollbar-width:none] placeholder:text-faint disabled:opacity-60 [&::-webkit-scrollbar]:hidden"
+              className="max-h-40 min-h-[2.75rem] flex-1 resize-none overflow-y-auto bg-transparent px-3 py-2.5 text-base leading-relaxed outline-none [scrollbar-width:none] placeholder:text-faint disabled:opacity-60 [&::-webkit-scrollbar]:hidden [&::placeholder]:whitespace-nowrap [&::placeholder]:overflow-hidden [&::placeholder]:text-ellipsis"
             />
             <VoiceButton
               disabled={busy}
